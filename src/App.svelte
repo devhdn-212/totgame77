@@ -146,6 +146,79 @@
     bets = bets.filter((entry) => entry.id !== id);
   }
 
+  const BET_TYPE_LABELS = ["4D", "3D", "3DD", "2D", "2DD", "2DT"];
+
+  let setNumberInput = $state("");
+  let setBetInputs = $state<Record<string, string>>(
+    Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""])),
+  );
+  let setFormError = $state("");
+
+  function handleSetNumberInput(e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const digitsOnly = target.value.replace(/\D/g, "").slice(0, 4);
+    setNumberInput = digitsOnly;
+    target.value = digitsOnly;
+    setFormError = "";
+  }
+
+  function handleSetBetInput(type: string, e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const digitsOnly = target.value.replace(/\D/g, "");
+    setBetInputs[type] = digitsOnly;
+    target.value = digitsOnly;
+    setFormError = "";
+  }
+
+  function deriveSetNumber(type: string, base: string) {
+    switch (type) {
+      case "4D":
+        return base;
+      case "3D":
+        return base.slice(1);
+      case "3DD":
+        return base.slice(0, 3);
+      case "2D":
+        return base.slice(2);
+      case "2DD":
+        return base.slice(0, 2);
+      default:
+        return base.slice(1, 3);
+    }
+  }
+
+  function handleAddSetBet() {
+    if (!/^\d{4}$/.test(setNumberInput)) {
+      setFormError = "Nomor harus 4 digit";
+      return;
+    }
+
+    const filled = BET_TYPE_LABELS.filter((type) => Number(setBetInputs[type]) > 0);
+    if (filled.length === 0) {
+      setFormError = "Isi minimal satu bet";
+      return;
+    }
+
+    for (const type of filled) {
+      if (Number(setBetInputs[type]) < MIN_BET) {
+        minBetAlertOpen = true;
+        return;
+      }
+    }
+
+    setFormError = "";
+    const newEntries = filled.map((type) => ({
+      id: crypto.randomUUID(),
+      type,
+      number: deriveSetNumber(type, setNumberInput),
+      bet: setBetInputs[type],
+    }));
+    bets = [...newEntries, ...bets];
+
+    setNumberInput = "";
+    setBetInputs = Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""]));
+  }
+
   let searchQuery = $state("");
   let activeTypeFilter = $state<string | null>(null);
 
@@ -156,8 +229,6 @@
   let filteredBets = $derived(
     searchFilteredBets.filter((entry) => !activeTypeFilter || entry.type === activeTypeFilter),
   );
-
-  const BET_TYPE_LABELS = ["4D", "3D", "3DD", "2D", "2DD", "2DT"];
 
   let betTypeCounts = $derived(
     BET_TYPE_LABELS.map((type) => ({
@@ -279,6 +350,45 @@
             </div>
             {#if formError}
               <p class="text-destructive mt-1 text-xs">{formError}</p>
+            {/if}
+          {:else if tab === "4D/3D/2D SET"}
+            <div class="flex flex-col gap-2">
+              <Input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength={4}
+                placeholder="Nomor 4 digit"
+                class="text-center"
+                value={setNumberInput}
+                oninput={handleSetNumberInput}
+              />
+              <div class="grid grid-cols-3 gap-2">
+                {#each BET_TYPE_LABELS as type (type)}
+                  <div class="flex flex-col gap-1">
+                    <span class="text-muted-foreground text-center text-xs">{type}</span>
+                    <Input
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="Bet"
+                      class="text-center"
+                      value={setBetInputs[type]}
+                      oninput={(e) => handleSetBetInput(type, e)}
+                    />
+                  </div>
+                {/each}
+              </div>
+              <Button
+                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
+                onclick={handleAddSetBet}
+              >
+                <Plus />
+                Tambah
+              </Button>
+            </div>
+            {#if setFormError}
+              <p class="text-destructive mt-1 text-xs">{setFormError}</p>
             {/if}
           {:else}
             <p class="text-muted-foreground">{tab}</p>
