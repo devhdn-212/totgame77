@@ -1,0 +1,411 @@
+<script lang="ts">
+  import Navbar from "$lib/components/Navbar.svelte";
+  import BottomNav from "$lib/components/BottomNav.svelte";
+  import { Button } from "$lib/components/ui/button";
+  import { Card, CardContent } from "$lib/components/ui/card";
+  import { Tabs, TabsList, TabsTrigger, TabsContent } from "$lib/components/ui/tabs";
+  import { Input } from "$lib/components/ui/input";
+  import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogAction,
+    AlertDialogCancel,
+  } from "$lib/components/ui/alert-dialog";
+  import { formatIDR, cn } from "$lib/utils";
+  import Plus from "@lucide/svelte/icons/plus";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
+  import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
+  import Dices from "@lucide/svelte/icons/dices";
+  import Search from "@lucide/svelte/icons/search";
+  import X from "@lucide/svelte/icons/x";
+  import { z } from "zod";
+  import Decimal from "decimal.js";
+  import { scale } from "svelte/transition";
+
+  const username = "ls0999212";
+  const periode = "6512";
+  const credit = "1000000";
+
+  const betTypes = ["4D/3D/2D", "Colok", "5050", "Macau/Kombinasi", "Dasar", "Shio"];
+
+  const fourDSubTabs = [
+    "4D/3D/2D",
+    "4D/3D/2D SET",
+    "BOLAK BALIK",
+    "WAP",
+    "QUICK 2D",
+    "POLA TARUNG",
+    "3D DEPAN",
+    "2D DEPAN",
+    "2D TENGAH",
+  ];
+
+  let showFourDTabs = $state(true);
+  let activeBetType = $state("4D/3D/2D");
+
+  function handleBetTypeClick(type: string) {
+    activeBetType = type;
+    if (type === "4D/3D/2D") {
+      showFourDTabs = !showFourDTabs;
+    }
+  }
+
+  let numberInput = $state("");
+  let betInput = $state("500");
+  let qtyInput = $state("1");
+  let formError = $state("");
+
+  function handleNumberInput(e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const filtered = target.value.replace(/[^0-9*]/g, "").slice(0, 4);
+    numberInput = filtered;
+    target.value = filtered;
+    formError = "";
+  }
+
+  const NUMBER_PATTERNS = ["DDDD", "DDD", "DDD*", "DD", "DD**", "*DD*"];
+
+  function handleGenerateNumber() {
+    const pattern = NUMBER_PATTERNS[Math.floor(Math.random() * NUMBER_PATTERNS.length)];
+    numberInput = pattern
+      .split("")
+      .map((char) => (char === "D" ? String(Math.floor(Math.random() * 10)) : char))
+      .join("");
+    formError = "";
+  }
+
+  function handleBetInput(e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const digitsOnly = target.value.replace(/\D/g, "");
+    betInput = digitsOnly;
+    target.value = digitsOnly;
+    formError = "";
+  }
+
+  function handleQtyInput(e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const digitsOnly = target.value.replace(/\D/g, "").slice(0, 2);
+    qtyInput = digitsOnly;
+    target.value = digitsOnly;
+    formError = "";
+  }
+
+  const NUMBER_PATTERN = /^(?:\d{4}|\d{3}\*|\d{3}|\d{2}\*{2}|\*\d{2}\*|\d{2})$/;
+
+  const betEntrySchema = z.object({
+    number: z.string().regex(NUMBER_PATTERN, "Format nomor tidak valid"),
+    bet: z.string().regex(/^[1-9]\d*$/, "Bet wajib diisi dengan angka"),
+    qty: z.string().regex(/^(?:[1-9]|[1-9][0-9])$/, "Qty harus antara 1-99"),
+  });
+
+  function classifyBetType(number: string) {
+    if (/^\d{4}$/.test(number)) return "4D";
+    if (/^\d{3}$/.test(number)) return "3D";
+    if (/^\d{3}\*$/.test(number)) return "3DD";
+    if (/^\d{2}$/.test(number)) return "2D";
+    if (/^\d{2}\*{2}$/.test(number)) return "2DD";
+    return "2DT";
+  }
+
+  type BetEntry = { id: string; type: string; number: string; bet: string };
+
+  let bets = $state<BetEntry[]>([]);
+
+  const MIN_BET = 500;
+  let minBetAlertOpen = $state(false);
+
+  function handleAddBet() {
+    const result = betEntrySchema.safeParse({ number: numberInput, bet: betInput, qty: qtyInput });
+    if (!result.success) {
+      formError = result.error.issues[0]?.message ?? "Input tidak valid";
+      return;
+    }
+    if (Number(result.data.bet) < MIN_BET) {
+      minBetAlertOpen = true;
+      return;
+    }
+    formError = "";
+    const type = classifyBetType(result.data.number);
+    const newEntries = Array.from({ length: Number(result.data.qty) }, () => ({
+      id: crypto.randomUUID(),
+      type,
+      number: result.data.number,
+      bet: result.data.bet,
+    }));
+    bets = [...newEntries, ...bets];
+    numberInput = "";
+    betInput = "500";
+    qtyInput = "1";
+  }
+
+  function handleDeleteBet(id: string) {
+    bets = bets.filter((entry) => entry.id !== id);
+  }
+
+  let searchQuery = $state("");
+  let activeTypeFilter = $state<string | null>(null);
+
+  let searchFilteredBets = $derived(
+    bets.filter((entry) => entry.number.replace(/\*/g, "").includes(searchQuery.trim())),
+  );
+
+  let filteredBets = $derived(
+    searchFilteredBets.filter((entry) => !activeTypeFilter || entry.type === activeTypeFilter),
+  );
+
+  const BET_TYPE_LABELS = ["4D", "3D", "3DD", "2D", "2DD", "2DT"];
+
+  let betTypeCounts = $derived(
+    BET_TYPE_LABELS.map((type) => ({
+      type,
+      count: searchFilteredBets.filter((entry) => entry.type === type).length,
+    })),
+  );
+
+  function handleTypeFilterClick(type: string) {
+    activeTypeFilter = type;
+  }
+
+  let totalBelanja = $derived(
+    bets.reduce((sum, entry) => sum.plus(entry.bet), new Decimal(0)),
+  );
+
+  let checkoutOpen = $state(false);
+
+  function handleConfirmCheckout() {
+    checkoutOpen = false;
+  }
+
+  function handleCancelCheckout() {
+    bets = [];
+    checkoutOpen = false;
+  }
+</script>
+
+<main class="mx-auto max-w-6xl px-4 py-6 pb-20 md:pb-6">
+  <Card>
+    <CardContent class="flex items-start justify-between gap-4">
+      <div>
+        <p class="text-lg font-semibold">HONGKONG</p>
+        <p class="text-muted-foreground text-sm">Periode {periode}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-medium">{username}</p>
+        <p class="text-muted-foreground text-xs">Credit</p>
+        <p class="text-primary text-lg font-semibold">{formatIDR(credit)}</p>
+      </div>
+    </CardContent>
+  </Card>
+
+  <div class="-mx-4 mt-4 flex scrollbar-none gap-2 overflow-x-auto px-4 pb-1">
+    {#each betTypes as type (type)}
+      <Button
+        variant="outline"
+        class={cn(
+          "shrink-0 cursor-pointer rounded-full",
+          activeBetType === type && "border-orange-300 bg-orange-100 text-orange-700 hover:bg-orange-200",
+        )}
+        onclick={() => handleBetTypeClick(type)}
+      >
+        {type}
+      </Button>
+    {/each}
+  </div>
+
+  {#if showFourDTabs}
+    <Tabs value={fourDSubTabs[0]} class="mt-4">
+      <div class="-mx-4 scrollbar-none overflow-x-auto px-4">
+        <TabsList class="w-max">
+          {#each fourDSubTabs as tab (tab)}
+            <TabsTrigger value={tab} class="cursor-pointer whitespace-nowrap">{tab}</TabsTrigger>
+          {/each}
+        </TabsList>
+      </div>
+      {#each fourDSubTabs as tab (tab)}
+        <TabsContent value={tab} class="text-sm">
+          {#if tab === "4D/3D/2D"}
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center gap-2">
+                <Input
+                  type="text"
+                  inputmode="text"
+                  pattern="[0-9*]*"
+                  maxlength={4}
+                  placeholder="0000"
+                  class="text-center"
+                  value={numberInput}
+                  oninput={handleNumberInput}
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  class="shrink-0 cursor-pointer"
+                  aria-label="Generate nomor acak"
+                  onclick={handleGenerateNumber}
+                >
+                  <Dices />
+                </Button>
+                <Input
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength={2}
+                  placeholder="Qty"
+                  class="w-14 shrink-0 text-center"
+                  value={qtyInput}
+                  oninput={handleQtyInput}
+                />
+                <Input
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Bet"
+                  class="text-center"
+                  value={betInput}
+                  oninput={handleBetInput}
+                />
+              </div>
+              <Button
+                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
+                onclick={handleAddBet}
+              >
+                <Plus />
+                Tambah
+              </Button>
+            </div>
+            {#if formError}
+              <p class="text-destructive mt-1 text-xs">{formError}</p>
+            {/if}
+          {:else}
+            <p class="text-muted-foreground">{tab}</p>
+          {/if}
+        </TabsContent>
+      {/each}
+    </Tabs>
+
+    {#if bets.length > 0}
+      <div class="mt-4 flex items-center justify-between">
+        <div>
+          <p class="text-muted-foreground text-xs">Total Belanja</p>
+          <p class="text-lg font-semibold">{formatIDR(totalBelanja)}</p>
+          <p class="text-muted-foreground text-xs">Total Row : {bets.length}</p>
+        </div>
+        <Button
+          class="shrink-0 cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
+          onclick={() => (checkoutOpen = true)}
+        >
+          <ShoppingCart />
+          Checkout
+        </Button>
+      </div>
+
+      <div class="relative mt-3">
+        <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+        <Input
+          type="text"
+          inputmode="numeric"
+          placeholder="Cari nomor"
+          class="pl-8"
+          bind:value={searchQuery}
+        />
+      </div>
+
+      <div class="mt-2 -mx-4 flex scrollbar-none items-center gap-2 overflow-x-auto px-4 pb-1">
+        {#each betTypeCounts as { type, count } (type)}
+          <button
+            type="button"
+            class={cn(
+              "shrink-0 cursor-pointer rounded-full border px-2 py-0.5 text-xs backdrop-blur-sm",
+              activeTypeFilter === type
+                ? "border-green-800 bg-green-700 text-white"
+                : "border-green-200 bg-green-100/70 text-green-700",
+            )}
+            onclick={() => handleTypeFilterClick(type)}
+          >
+            {type} :
+            {#key count}
+              <span class="inline-block" in:scale={{ duration: 250, start: 0.4 }}>{count}</span>
+            {/key}
+          </button>
+        {/each}
+      </div>
+
+      {#if activeTypeFilter}
+        <button
+          type="button"
+          aria-label="Bersihkan filter"
+          class="mt-2 w-fit cursor-pointer rounded-full border border-red-200 bg-red-50 p-1 text-red-600 hover:bg-red-100"
+          onclick={() => (activeTypeFilter = null)}
+        >
+          <X class="size-3.5" />
+        </button>
+      {/if}
+
+      <div class="mt-3 flex flex-col gap-2">
+        {#each filteredBets as entry (entry.id)}
+          <div class="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
+              <p class="text-muted-foreground text-xs">Bet : {formatIDR(entry.bet)}</p>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              class="text-destructive cursor-pointer"
+              aria-label="Hapus"
+              onclick={() => handleDeleteBet(entry.id)}
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/if}
+</main>
+
+<AlertDialog bind:open={checkoutOpen}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Konfirmasi Checkout</AlertDialogTitle>
+      <AlertDialogDescription>
+        Apakah anda yakin ingin belanja dengan total bet {formatIDR(totalBelanja)}?
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel class="cursor-pointer" onclick={handleCancelCheckout}>
+        Dibatalkan
+      </AlertDialogCancel>
+      <Button
+        variant="outline"
+        class="cursor-pointer"
+        onclick={() => (checkoutOpen = false)}
+      >
+        Lanjut Belanja
+      </Button>
+      <AlertDialogAction class="cursor-pointer" onclick={handleConfirmCheckout}>
+        Ya
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
+<AlertDialog bind:open={minBetAlertOpen}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Bet Tidak Valid</AlertDialogTitle>
+      <AlertDialogDescription>Minimal bet {formatIDR(MIN_BET)}</AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogAction class="cursor-pointer" onclick={() => (minBetAlertOpen = false)}>
+        OK
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
+<BottomNav />
