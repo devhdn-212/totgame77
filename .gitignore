@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Go backend
+.env
+gocu_client_server
+gocu_client_server.exe

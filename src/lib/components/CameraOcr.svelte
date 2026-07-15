@@ -12,7 +12,6 @@
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import { createWorker, PSM } from "tesseract.js";
 
   type BetEntry = {
     id: string;
@@ -41,14 +40,12 @@
 
   let imageUrl = $state("");
   let status = $state<"idle" | "recognizing" | "done" | "error">("idle");
-  let progress = $state(0);
   let parsedRows = $state<ParsedRow[]>([]);
   let errorMessage = $state("");
 
   function reset() {
     imageUrl = "";
     status = "idle";
-    progress = 0;
     parsedRows = [];
     errorMessage = "";
   }
@@ -81,90 +78,27 @@
     return [{ type: "2D", number }];
   }
 
-  function parseRawText(text: string): ParsedRow[] {
-    const rows: ParsedRow[] = [];
-    for (const line of text.split("\n")) {
-      // Take the last two digit-groups on the line as (number, bet),
-      // regardless of what separates them (":", ".", or just whitespace) —
-      // label prefixes like "4D" only ever contribute a single stray digit.
-      const groups = line.match(/\d{2,}/g);
-      if (!groups || groups.length < 2) continue;
-      const bet = groups[groups.length - 1];
-      const number = groups[groups.length - 2];
-      rows.push({ id: crypto.randomUUID(), number, bet });
-    }
-    return rows;
-  }
-
-  // Normalizes lighting/contrast/polarity so real-world phone photos (dark
-  // backgrounds, glare, low contrast) read as reliably as a clean scan.
-  async function preprocessImage(source: Blob): Promise<Blob> {
-    const bitmap = await createImageBitmap(source);
-    const scale = bitmap.width < 900 ? 2 : 1;
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width * scale;
-    canvas.height = bitmap.height * scale;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return source;
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    let sum = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      data[i] = data[i + 1] = data[i + 2] = gray;
-      sum += gray;
-    }
-    const avg = sum / (data.length / 4);
-    const backgroundDark = avg < 128;
-    const margin = 20;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const g = data[i];
-      const isText = backgroundDark ? g > avg + margin : g < avg - margin;
-      const v = isText ? 0 : 255;
-      data[i] = data[i + 1] = data[i + 2] = v;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob ?? source), "image/png"));
-  }
-
   async function runOcr(source: Blob) {
     imageUrl = URL.createObjectURL(source);
     status = "recognizing";
     errorMessage = "";
 
     try {
-      const processed = await preprocessImage(source);
-      const worker = await createWorker("eng", 1, {
-        logger: (m) => {
-          if (m.status === "recognizing text") progress = Math.round(m.progress * 100);
-        },
-      });
-      await worker.setParameters({
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-        tessedit_char_whitelist: "0123456789Dd:;.- ",
-      });
+      const formData = new FormData();
+      formData.append("image", source, "scan.jpg");
 
-      const first = await worker.recognize(processed);
-      console.log("OCR raw:", JSON.stringify(first.data.text));
-      let rows = parseRawText(first.data.text);
+      const res = await fetch("/api/ocr/scan", { method: "POST", body: formData });
+      const body = await res.json();
 
-      // Preprocessing can occasionally hurt more than it helps on unusual
-      // source images — fall back to the raw photo before giving up.
-      if (rows.length === 0) {
-        progress = 0;
-        const second = await worker.recognize(source);
-        console.log("OCR raw (fallback):", JSON.stringify(second.data.text));
-        rows = parseRawText(second.data.text);
+      if (!res.ok) {
+        throw new Error(body?.message ?? `request failed (${res.status})`);
       }
 
-      await worker.terminate();
-
-      parsedRows = rows;
+      parsedRows = (body.record ?? []).map((row: { number: string; bet: string }) => ({
+        id: crypto.randomUUID(),
+        number: row.number,
+        bet: row.bet,
+      }));
       status = "done";
       if (parsedRows.length === 0) {
         errorMessage = "Tidak ada nomor yang terbaca. Coba foto ulang dengan tulisan lebih jelas.";
@@ -269,7 +203,7 @@
       {#if status === "recognizing"}
         <div class="flex flex-col items-center gap-2 py-4">
           <LoaderCircle class="animate-spin" />
-          <p class="text-muted-foreground text-xs">Membaca gambar... {progress}%</p>
+          <p class="text-muted-foreground text-xs">Membaca gambar...</p>
         </div>
       {:else if status === "error"}
         <p class="text-destructive text-xs">{errorMessage}</p>
