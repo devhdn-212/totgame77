@@ -33,6 +33,7 @@
   import { z } from "zod";
   import Decimal from "decimal.js";
   import { scale } from "svelte/transition";
+  import { untrack } from "svelte";
 
   const username = "ls0999212";
   const periode = "6512";
@@ -397,7 +398,7 @@
   let bolakBalikGuardOpen = $state(false);
 
   $effect(() => {
-    if (activeSubTab === "BOLAK BALIK" && bets.length > 0) {
+    if (activeSubTab === "BOLAK BALIK" && untrack(() => bets.length > 0)) {
       activeSubTab = lastValidSubTab;
       bolakBalikGuardOpen = true;
     } else {
