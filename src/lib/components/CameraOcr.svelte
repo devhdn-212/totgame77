@@ -144,6 +144,7 @@
       });
 
       const first = await worker.recognize(processed);
+      console.log("OCR raw:", JSON.stringify(first.data.text));
       let rows = parseRawText(first.data.text);
 
       // Preprocessing can occasionally hurt more than it helps on unusual
@@ -151,6 +152,7 @@
       if (rows.length === 0) {
         progress = 0;
         const second = await worker.recognize(source);
+        console.log("OCR raw (fallback):", JSON.stringify(second.data.text));
         rows = parseRawText(second.data.text);
       }
 
