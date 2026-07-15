@@ -120,7 +120,13 @@
     return "2DT";
   }
 
-  type BetEntry = { id: string; type: string; number: string; bet: string };
+  type BetEntry = {
+    id: string;
+    type: string;
+    number: string;
+    bet: string;
+    deletable?: boolean;
+  };
 
   let bets = $state<BetEntry[]>([]);
   let listTransaksi = $state<BetEntry[]>([]);
@@ -169,6 +175,12 @@
     const digitsOnly = target.value.replace(/\D/g, "").slice(0, 4);
     setNumberInput = digitsOnly;
     target.value = digitsOnly;
+    setFormError = "";
+  }
+
+  function handleGenerateSetNumber() {
+    const digits = Array.from({ length: 10 }, (_, i) => String(i)).sort(() => Math.random() - 0.5);
+    setNumberInput = digits.slice(0, 4).join("");
     setFormError = "";
   }
 
@@ -347,6 +359,7 @@
       type: result.pasaran,
       number: result.nomor,
       bet: bbBetInput,
+      deletable: false,
     }));
     bets = [...newEntries, ...bets];
 
@@ -522,16 +535,27 @@
             {/if}
           {:else if tab === "4D/3D/2D SET"}
             <div class="flex flex-col gap-2">
-              <Input
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                maxlength={4}
-                placeholder="Nomor 4 digit"
-                class="text-center"
-                value={setNumberInput}
-                oninput={handleSetNumberInput}
-              />
+              <div class="flex items-center gap-2">
+                <Input
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength={4}
+                  placeholder="Nomor 4 digit"
+                  class="text-center"
+                  value={setNumberInput}
+                  oninput={handleSetNumberInput}
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  class="shrink-0 cursor-pointer"
+                  aria-label="Generate nomor acak"
+                  onclick={handleGenerateSetNumber}
+                >
+                  <Dices />
+                </Button>
+              </div>
               <div class="grid grid-cols-3 gap-2">
                 {#each BET_TYPE_LABELS as type (type)}
                   <div class="flex flex-col gap-1">
@@ -697,15 +721,17 @@
               <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
               <p class="text-muted-foreground text-xs">Bet : {formatIDR(entry.bet)}</p>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              class="text-destructive cursor-pointer"
-              aria-label="Hapus"
-              onclick={() => handleDeleteBet(entry.id)}
-            >
-              <Trash2 />
-            </Button>
+            {#if entry.deletable !== false}
+              <Button
+                size="icon"
+                variant="ghost"
+                class="text-destructive cursor-pointer"
+                aria-label="Hapus"
+                onclick={() => handleDeleteBet(entry.id)}
+              >
+                <Trash2 />
+              </Button>
+            {/if}
           </div>
         {/each}
       </div>
