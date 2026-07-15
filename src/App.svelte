@@ -41,10 +41,13 @@
   import Decimal from "decimal.js";
   import { scale } from "svelte/transition";
   import { untrack } from "svelte";
+  import { Tween } from "svelte/motion";
+  import { cubicOut } from "svelte/easing";
 
   const username = "ls0999212";
   const periode = "6512";
-  const credit = "1000000";
+  let credit = $state(new Decimal(1000000));
+  const creditDisplay = new Tween(credit.toNumber(), { duration: 800, easing: cubicOut });
 
   const betTypes = ["4D/3D/2D", "Colok", "5050", "Macau/Kombinasi", "Dasar", "Shio"];
 
@@ -437,8 +440,19 @@
   );
 
   let checkoutOpen = $state(false);
+  let insufficientCreditAlertOpen = $state(false);
+
+  function handleCheckoutClick() {
+    if (totalBelanja.greaterThan(credit)) {
+      insufficientCreditAlertOpen = true;
+      return;
+    }
+    checkoutOpen = true;
+  }
 
   function handleConfirmCheckout() {
+    credit = credit.minus(totalBelanja);
+    creditDisplay.set(credit.toNumber());
     listTransaksi = [...bets, ...listTransaksi];
     bets = [];
     checkoutOpen = false;
@@ -464,7 +478,7 @@
 
   function handleGuardCheckout() {
     bolakBalikGuardOpen = false;
-    checkoutOpen = true;
+    handleCheckoutClick();
   }
 
   function handleGuardCancel() {
@@ -492,7 +506,9 @@
       <div class="text-right">
         <p class="text-sm font-medium">{username}</p>
         <p class="text-muted-foreground text-xs">Credit</p>
-        <p class="text-primary text-lg font-semibold">{formatIDR(credit)}</p>
+        <p class="text-lg font-semibold text-blue-600">
+          {formatIDR(creditDisplay.current)}
+        </p>
       </div>
     </CardContent>
   </Card>
@@ -719,7 +735,7 @@
           </Button>
           <Button
             class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
-            onclick={() => (checkoutOpen = true)}
+            onclick={handleCheckoutClick}
           >
             <ShoppingCart />
             Checkout
@@ -774,7 +790,7 @@
           <div class="flex items-center justify-between rounded-lg border p-3">
             <div>
               <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
-              <p class="text-muted-foreground text-xs">Bet : {formatIDR(entry.bet)}</p>
+              <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
             </div>
             {#if entry.deletable !== false}
               <Button
@@ -834,6 +850,25 @@
   </AlertDialogContent>
 </AlertDialog>
 
+<AlertDialog bind:open={insufficientCreditAlertOpen}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Informasi</AlertDialogTitle>
+      <AlertDialogDescription>
+        Saldo tidak cukup untuk melakukan transaksi
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogAction
+        class="cursor-pointer"
+        onclick={() => (insufficientCreditAlertOpen = false)}
+      >
+        OK
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
 <AlertDialog bind:open={bolakBalikGuardOpen}>
   <AlertDialogContent onCloseAutoFocus={(e: Event) => e.preventDefault()}>
     <AlertDialogHeader>
@@ -880,7 +915,7 @@
                   <p class="text-sm font-medium">
                     {entry.type} - {entry.number.replace(/\*/g, "")}
                   </p>
-                  <p class="text-muted-foreground text-xs">Bet : {formatIDR(entry.bet)}</p>
+                  <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
                 </div>
               {/each}
             </div>
