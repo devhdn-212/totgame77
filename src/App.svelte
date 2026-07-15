@@ -35,7 +35,8 @@
   import Search from "@lucide/svelte/icons/search";
   import X from "@lucide/svelte/icons/x";
   import Decimal from "decimal.js";
-  import { scale } from "svelte/transition";
+  import { scale, slide } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import { Tween } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
 
@@ -181,7 +182,9 @@
   {/if}
 
   {#if bets.length > 0}
-    <div class="mt-4 flex items-center justify-between">
+    <div
+      class="bg-background sticky top-0 z-10 -mx-4 mt-4 flex items-center justify-between border-b px-4 py-3"
+    >
       <div>
         <p class="text-muted-foreground text-xs">Total Belanja</p>
         <p class="text-lg font-semibold">{formatIDR(totalBelanja)}</p>
@@ -250,7 +253,11 @@
 
     <div class="mt-3 flex flex-col gap-2">
       {#each filteredBets as entry (entry.id)}
-        <div class="flex items-center justify-between rounded-lg border p-3">
+        <div
+          class="flex items-center justify-between rounded-lg border p-3"
+          out:slide={{ duration: 200 }}
+          animate:flip={{ duration: 200 }}
+        >
           <div>
             <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
             <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
