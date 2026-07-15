@@ -82,13 +82,9 @@
   }
 
   function parseRawText(text: string): ParsedRow[] {
-    const seen = new Set<string>();
     const rows: ParsedRow[] = [];
     const matches = text.matchAll(/(\d{2,4})\D+(\d{2,})/g);
     for (const match of matches) {
-      const key = `${match[1]}:${match[2]}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
       rows.push({ id: crypto.randomUUID(), number: match[1], bet: match[2] });
     }
     return rows;
