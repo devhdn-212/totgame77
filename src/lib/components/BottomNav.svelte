@@ -2,14 +2,17 @@
 	import { cn } from "$lib/utils";
 	import Receipt from "@lucide/svelte/icons/receipt";
 	import ShoppingBag from "@lucide/svelte/icons/shopping-bag";
+	import Camera from "@lucide/svelte/icons/camera";
 
 	let {
 		active = $bindable("transaksi"),
 		onTransaksiClick,
-	}: { active?: string; onTransaksiClick?: () => void } = $props();
+		onCameraClick,
+	}: { active?: string; onTransaksiClick?: () => void; onCameraClick?: () => void } = $props();
 
 	const items = [
 		{ key: "transaksi", label: "Transaksi", href: "#/transaksi", icon: Receipt },
+		{ key: "camera", label: "Camera", href: "#/camera", icon: Camera },
 		{ key: "belanja", label: "Belanja", href: "#/belanja", icon: ShoppingBag },
 	];
 </script>
@@ -31,6 +34,9 @@
 					if (item.key === "transaksi") {
 						e.preventDefault();
 						onTransaksiClick?.();
+					} else if (item.key === "camera") {
+						e.preventDefault();
+						onCameraClick?.();
 					}
 				}}
 			>

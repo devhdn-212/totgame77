@@ -1,19 +1,17 @@
 <script lang="ts">
   import Navbar from "$lib/components/Navbar.svelte";
   import BottomNav from "$lib/components/BottomNav.svelte";
-  import Form432 from "$lib/components/Form432.svelte";
+  import TabFourD from "$lib/components/TabFourD.svelte";
+  import TabColok from "$lib/components/TabColok.svelte";
+  import Tab5050 from "$lib/components/Tab5050.svelte";
+  import TabMacauKombinasi from "$lib/components/TabMacauKombinasi.svelte";
+  import TabDasar from "$lib/components/TabDasar.svelte";
+  import TabShio from "$lib/components/TabShio.svelte";
+  import CameraOcr from "$lib/components/CameraOcr.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Card, CardContent } from "$lib/components/ui/card";
   import { Tabs, TabsList, TabsTrigger, TabsContent } from "$lib/components/ui/tabs";
   import { Input } from "$lib/components/ui/input";
-  import { Textarea } from "$lib/components/ui/textarea";
-  import { RadioGroup, RadioGroupItem } from "$lib/components/ui/radio-group";
-  import {
-    Select,
-    SelectTrigger,
-    SelectContent,
-    SelectItem,
-  } from "$lib/components/ui/select";
   import {
     AlertDialog,
     AlertDialogContent,
@@ -32,15 +30,12 @@
     DialogDescription,
   } from "$lib/components/ui/dialog";
   import { formatIDR, cn } from "$lib/utils";
-  import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
-  import Dices from "@lucide/svelte/icons/dices";
   import Search from "@lucide/svelte/icons/search";
   import X from "@lucide/svelte/icons/x";
   import Decimal from "decimal.js";
   import { scale } from "svelte/transition";
-  import { untrack } from "svelte";
   import { Tween } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
 
@@ -51,20 +46,10 @@
 
   const betTypes = ["4D/3D/2D", "Colok", "5050", "Macau/Kombinasi", "Dasar", "Shio"];
 
-  const fourDSubTabs = [
-    "4D/3D/2D",
-    "4D/3D/2D SET",
-    "BOLAK BALIK",
-    "WAP",
-    "QUICK 2D",
-  ];
-
-  let showFourDTabs = $state(true);
   let activeBetType = $state("4D/3D/2D");
 
   function handleBetTypeClick(type: string) {
     activeBetType = type;
-    showFourDTabs = type === "4D/3D/2D";
   }
 
   type BetEntry = {
@@ -86,332 +71,6 @@
   }
 
   const BET_TYPE_LABELS = ["4D", "3D", "3DD", "2D", "2DD", "2DT"];
-
-  let setNumberInput = $state("");
-  let setBetInputs = $state<Record<string, string>>(
-    Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""])),
-  );
-  let setFormError = $state("");
-
-  function handleSetNumberInput(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const digitsOnly = target.value.replace(/\D/g, "").slice(0, 4);
-    setNumberInput = digitsOnly;
-    target.value = digitsOnly;
-    setFormError = "";
-  }
-
-  function handleGenerateSetNumber() {
-    const digits = Array.from({ length: 10 }, (_, i) => String(i)).sort(() => Math.random() - 0.5);
-    setNumberInput = digits.slice(0, 4).join("");
-    setFormError = "";
-  }
-
-  function handleSetBetInput(type: string, e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const digitsOnly = target.value.replace(/\D/g, "");
-    setBetInputs[type] = digitsOnly;
-    target.value = digitsOnly;
-    setFormError = "";
-  }
-
-  function deriveSetNumber(type: string, base: string) {
-    switch (type) {
-      case "4D":
-        return base;
-      case "3D":
-        return base.slice(1);
-      case "3DD":
-        return base.slice(0, 3);
-      case "2D":
-        return base.slice(2);
-      case "2DD":
-        return base.slice(0, 2);
-      default:
-        return base.slice(1, 3);
-    }
-  }
-
-  function handleAddSetBet() {
-    if (!/^\d{4}$/.test(setNumberInput)) {
-      setFormError = "Nomor harus 4 digit";
-      return;
-    }
-
-    const filled = BET_TYPE_LABELS.filter((type) => Number(setBetInputs[type]) > 0);
-    if (filled.length === 0) {
-      setFormError = "Isi minimal satu bet";
-      return;
-    }
-
-    for (const type of filled) {
-      if (Number(setBetInputs[type]) < MIN_BET) {
-        minBetAlertOpen = true;
-        return;
-      }
-    }
-
-    setFormError = "";
-    const newEntries = filled.map((type) => ({
-      id: crypto.randomUUID(),
-      type,
-      number: deriveSetNumber(type, setNumberInput),
-      bet: setBetInputs[type],
-    }));
-    bets = [...newEntries, ...bets];
-
-    setNumberInput = "";
-    setBetInputs = Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""]));
-  }
-
-  let bbNumberInput = $state("");
-  let bbBetInput = $state("500");
-  let bbFormError = $state("");
-  let bbWarning = $state("");
-  let bbKembarMode = $state("tidak-kembar");
-
-  function handleBbNumberInput(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const digitsOnly = target.value.replace(/\D/g, "").slice(0, 15);
-    bbNumberInput = digitsOnly;
-    target.value = digitsOnly;
-    bbFormError = "";
-    bbWarning = "";
-  }
-
-  function handleBbBetInput(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const digitsOnly = target.value.replace(/\D/g, "");
-    bbBetInput = digitsOnly;
-    target.value = digitsOnly;
-    bbFormError = "";
-  }
-
-  function handleGenerateBbNumber() {
-    const length = 4 + Math.floor(Math.random() * 3);
-    const digits = Array.from({ length: 10 }, (_, i) => String(i)).sort(() => Math.random() - 0.5);
-    bbNumberInput = digits.slice(0, length).join("");
-    bbFormError = "";
-    bbWarning = "";
-  }
-
-  function cartesianCombos(digits: string[], width: number): string[] {
-    let combos = [""];
-    for (let i = 0; i < width; i++) {
-      combos = combos.flatMap((prefix) => digits.map((d) => prefix + d));
-    }
-    return combos;
-  }
-
-  function permutationsWithoutRepeat(digits: string[], width: number): string[] {
-    const n = digits.length;
-    if (n < width) return [];
-    const results: string[] = [];
-    const used = new Array(n).fill(false);
-    function permute(current: string[]) {
-      if (current.length === width) {
-        results.push(current.join(""));
-        return;
-      }
-      for (let i = 0; i < n; i++) {
-        if (used[i]) continue;
-        used[i] = true;
-        current.push(digits[i]);
-        permute(current);
-        current.pop();
-        used[i] = false;
-      }
-    }
-    permute([]);
-    return results;
-  }
-
-  const BB_LABEL_GROUPS: Record<number, string[]> = {
-    4: ["4D"],
-    3: ["3D", "3DD"],
-    2: ["2D", "2DD", "2DT"],
-  };
-
-  function generateBB(nomor: string, allowKembar: boolean): { pasaran: string; nomor: string }[] {
-    const output: { pasaran: string; nomor: string }[] = [];
-    const uniqueDigits = [...new Set(nomor.split(""))];
-    for (const width of [4, 3, 2]) {
-      const combos = allowKembar
-        ? cartesianCombos(uniqueDigits, width)
-        : permutationsWithoutRepeat(uniqueDigits, width);
-      for (const label of BB_LABEL_GROUPS[width]) {
-        for (const combo of combos) {
-          output.push({ pasaran: label, nomor: combo });
-        }
-      }
-    }
-    return output;
-  }
-
-  function handleAddBolakBalik() {
-    if (bbNumberInput.length === 0) {
-      bbFormError = "Nomor wajib diisi";
-      return;
-    }
-    if (!/^[1-9]\d*$/.test(bbBetInput)) {
-      bbFormError = "Bet wajib diisi dengan angka";
-      return;
-    }
-    if (Number(bbBetInput) < MIN_BET) {
-      minBetAlertOpen = true;
-      return;
-    }
-
-    const allowKembar = bbKembarMode === "kembar";
-    const results = generateBB(bbNumberInput, allowKembar);
-    const uniqueDigitCount = new Set(bbNumberInput.split("")).size;
-
-    const emptyLabels = !allowKembar
-      ? Object.entries(BB_LABEL_GROUPS)
-          .filter(([width]) => uniqueDigitCount < Number(width))
-          .flatMap(([, labels]) => labels)
-      : [];
-    bbWarning =
-      emptyLabels.length > 0
-        ? `Pasaran ${emptyLabels.join(", ")} kosong karena digit unik kurang (unik: ${uniqueDigitCount})`
-        : "";
-
-    bbFormError = "";
-    const newEntries = results.map((result) => ({
-      id: crypto.randomUUID(),
-      type: result.pasaran,
-      number: result.nomor,
-      bet: bbBetInput,
-      deletable: false,
-    }));
-    bets = [...newEntries, ...bets];
-
-    bbNumberInput = "";
-    bbBetInput = "500";
-  }
-
-  let wapInput = $state("");
-  let wapFormError = $state("");
-
-  function handleWapInput(e: Event) {
-    const target = e.currentTarget as HTMLTextAreaElement;
-    const filtered = target.value.replace(/[^0-9*#,]/g, "");
-    wapInput = filtered;
-    target.value = filtered;
-    wapFormError = "";
-  }
-
-  function classifyByLength(number: string) {
-    if (number.length === 4) return "4D";
-    if (number.length === 3) return "3D";
-    if (number.length === 2) return "2D";
-    return null;
-  }
-
-  function handleAddWap() {
-    const raw = wapInput.trim();
-    if (raw.length === 0) {
-      wapFormError = "Nomor wajib diisi";
-      return;
-    }
-
-    const groups = raw.split(",").filter((g) => g.trim() !== "");
-    if (groups.length === 0) {
-      wapFormError = "Nomor wajib diisi";
-      return;
-    }
-
-    type ParsedEntry = { type: string; number: string; bet: string };
-    const parsed: ParsedEntry[] = [];
-
-    for (const group of groups) {
-      const [numbersPart, betPart] = group.split("#");
-
-      if (!betPart || !/^[1-9]\d*$/.test(betPart)) {
-        wapFormError = `Bet wajib diisi (format nomor#bet) pada "${group}"`;
-        return;
-      }
-      const bet = betPart;
-      if (Number(bet) < MIN_BET) {
-        minBetAlertOpen = true;
-        return;
-      }
-
-      const numbers = (numbersPart ?? "").split("*").filter((n) => n !== "");
-      if (numbers.length === 0) {
-        wapFormError = `Nomor tidak valid pada "${group}"`;
-        return;
-      }
-
-      for (const number of numbers) {
-        const type = classifyByLength(number);
-        if (!type) {
-          wapFormError = `Nomor "${number}" harus 2-4 digit`;
-          return;
-        }
-        parsed.push({ type, number, bet });
-      }
-    }
-
-    wapFormError = "";
-    const newEntries = parsed.map((entry) => ({
-      id: crypto.randomUUID(),
-      type: entry.type,
-      number: entry.number,
-      bet: entry.bet,
-    }));
-    bets = [...newEntries, ...bets];
-
-    wapInput = "";
-  }
-
-  const QUICK_KONDISI_OPTIONS = ["BESAR", "KECIL", "GANJIL", "GENAP"];
-  const QUICK_PASARAN_OPTIONS = ["2D", "2DD", "2DT"];
-
-  let quickKondisi = $state("BESAR");
-  let quickPasaran = $state("2D");
-  let quickBetInput = $state("500");
-  let quickFormError = $state("");
-
-  function handleQuickBetInput(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const digitsOnly = target.value.replace(/\D/g, "");
-    quickBetInput = digitsOnly;
-    target.value = digitsOnly;
-    quickFormError = "";
-  }
-
-  function handleAddQuick2D() {
-    if (!/^[1-9]\d*$/.test(quickBetInput)) {
-      quickFormError = "Bet wajib diisi dengan angka";
-      return;
-    }
-    if (Number(quickBetInput) < MIN_BET) {
-      minBetAlertOpen = true;
-      return;
-    }
-
-    const numbers: string[] = [];
-    for (let n = 0; n <= 99; n++) {
-      const matches =
-        (quickKondisi === "BESAR" && n > 49) ||
-        (quickKondisi === "KECIL" && n < 50) ||
-        (quickKondisi === "GANJIL" && n % 2 === 1) ||
-        (quickKondisi === "GENAP" && n % 2 === 0);
-      if (matches) numbers.push(String(n).padStart(2, "0"));
-    }
-
-    quickFormError = "";
-    const newEntries = numbers.map((number) => ({
-      id: crypto.randomUUID(),
-      type: quickPasaran,
-      number,
-      bet: quickBetInput,
-    }));
-    bets = [...newEntries, ...bets];
-
-    quickBetInput = "500";
-  }
 
   let searchQuery = $state("");
   let activeTypeFilter = $state<string | null>(null);
@@ -463,29 +122,8 @@
     checkoutOpen = false;
   }
 
-  let activeSubTab = $state(fourDSubTabs[0]);
-  let lastValidSubTab = fourDSubTabs[0];
-  let bolakBalikGuardOpen = $state(false);
-
-  $effect(() => {
-    if (activeSubTab === "BOLAK BALIK" && untrack(() => bets.length > 0)) {
-      activeSubTab = lastValidSubTab;
-      bolakBalikGuardOpen = true;
-    } else {
-      lastValidSubTab = activeSubTab;
-    }
-  });
-
-  function handleGuardCheckout() {
-    bolakBalikGuardOpen = false;
-    handleCheckoutClick();
-  }
-
-  function handleGuardCancel() {
-    bolakBalikGuardOpen = false;
-  }
-
   let transaksiModalOpen = $state(false);
+  let cameraOcrOpen = $state(false);
 
   let transaksiGroups = $derived(
     BET_TYPE_LABELS.map((type) => {
@@ -528,285 +166,109 @@
     {/each}
   </div>
 
-  {#if showFourDTabs}
-    <Tabs bind:value={activeSubTab} class="mt-4">
-      <div class="-mx-4 scrollbar-none overflow-x-auto px-4">
-        <TabsList class="w-max">
-          {#each fourDSubTabs as tab (tab)}
-            <TabsTrigger value={tab} class="cursor-pointer whitespace-nowrap">{tab}</TabsTrigger>
-          {/each}
-        </TabsList>
-      </div>
-      {#each fourDSubTabs as tab (tab)}
-        <TabsContent value={tab} class="text-sm">
-          {#if tab === "4D/3D/2D"}
-            <Form432 bind:bets bind:minBetAlertOpen />
-          {:else if tab === "4D/3D/2D SET"}
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <Input
-                  type="text"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  maxlength={4}
-                  placeholder="Nomor 4 digit"
-                  class="text-center"
-                  value={setNumberInput}
-                  oninput={handleSetNumberInput}
-                />
-                <Button
-                  size="icon"
-                  variant="outline"
-                  class="shrink-0 cursor-pointer"
-                  aria-label="Generate nomor acak"
-                  onclick={handleGenerateSetNumber}
-                >
-                  <Dices />
-                </Button>
-              </div>
-              <div class="grid grid-cols-3 gap-2">
-                {#each BET_TYPE_LABELS as type (type)}
-                  <div class="flex flex-col gap-1">
-                    <span class="text-muted-foreground text-center text-xs">{type}</span>
-                    <Input
-                      type="text"
-                      inputmode="numeric"
-                      pattern="[0-9]*"
-                      placeholder="Bet"
-                      class="text-center"
-                      value={setBetInputs[type]}
-                      oninput={(e) => handleSetBetInput(type, e)}
-                    />
-                  </div>
-                {/each}
-              </div>
-              <Button
-                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
-                onclick={handleAddSetBet}
-              >
-                <Plus />
-                Tambah
-              </Button>
-            </div>
-            {#if setFormError}
-              <p class="text-destructive mt-1 text-xs">{setFormError}</p>
-            {/if}
-          {:else if tab === "BOLAK BALIK"}
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <Input
-                  type="text"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  maxlength={15}
-                  placeholder="Nomor"
-                  class="text-center"
-                  value={bbNumberInput}
-                  oninput={handleBbNumberInput}
-                />
-                <Button
-                  size="icon"
-                  variant="outline"
-                  class="shrink-0 cursor-pointer"
-                  aria-label="Generate nomor acak"
-                  onclick={handleGenerateBbNumber}
-                >
-                  <Dices />
-                </Button>
-                <Input
-                  type="text"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="Bet"
-                  class="text-center"
-                  value={bbBetInput}
-                  oninput={handleBbBetInput}
-                />
-              </div>
-              <RadioGroup bind:value={bbKembarMode} class="flex justify-center gap-4">
-                <label class="flex items-center gap-2 text-sm">
-                  <RadioGroupItem value="tidak-kembar" />
-                  Tidak Kembar
-                </label>
-                <label class="flex items-center gap-2 text-sm">
-                  <RadioGroupItem value="kembar" />
-                  Kembar
-                </label>
-              </RadioGroup>
-              <Button
-                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
-                onclick={handleAddBolakBalik}
-              >
-                <Plus />
-                Tambah
-              </Button>
-            </div>
-            {#if bbFormError}
-              <p class="text-destructive mt-1 text-xs">{bbFormError}</p>
-            {/if}
-            {#if bbWarning}
-              <p class="mt-1 text-xs text-amber-600">{bbWarning}</p>
-            {/if}
-          {:else if tab === "WAP"}
-            <div class="flex flex-col gap-2">
-              <Textarea
-                placeholder="contoh : 1234*234*34#1000,34*235*35#5000"
-                class="min-h-24"
-                value={wapInput}
-                oninput={handleWapInput}
-              />
-              <Button
-                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
-                onclick={handleAddWap}
-              >
-                <Plus />
-                Tambah
-              </Button>
-            </div>
-            {#if wapFormError}
-              <p class="text-destructive mt-1 text-xs">{wapFormError}</p>
-            {/if}
-          {:else if tab === "QUICK 2D"}
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <Select type="single" bind:value={quickKondisi}>
-                  <SelectTrigger class="w-full">
-                    {quickKondisi}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {#each QUICK_KONDISI_OPTIONS as option (option)}
-                      <SelectItem value={option}>{option}</SelectItem>
-                    {/each}
-                  </SelectContent>
-                </Select>
-                <Select type="single" bind:value={quickPasaran}>
-                  <SelectTrigger class="w-full">
-                    {quickPasaran}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {#each QUICK_PASARAN_OPTIONS as option (option)}
-                      <SelectItem value={option}>{option}</SelectItem>
-                    {/each}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Input
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                placeholder="Bet"
-                class="text-center"
-                value={quickBetInput}
-                oninput={handleQuickBetInput}
-              />
-              <Button
-                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
-                onclick={handleAddQuick2D}
-              >
-                <Plus />
-                Tambah
-              </Button>
-            </div>
-            {#if quickFormError}
-              <p class="text-destructive mt-1 text-xs">{quickFormError}</p>
-            {/if}
-          {:else}
-            <p class="text-muted-foreground">{tab}</p>
-          {/if}
-        </TabsContent>
-      {/each}
-    </Tabs>
+  {#if activeBetType === "4D/3D/2D"}
+    <TabFourD bind:bets bind:minBetAlertOpen onCheckoutClick={handleCheckoutClick} />
+  {:else if activeBetType === "Colok"}
+    <TabColok />
+  {:else if activeBetType === "5050"}
+    <Tab5050 />
+  {:else if activeBetType === "Macau/Kombinasi"}
+    <TabMacauKombinasi />
+  {:else if activeBetType === "Dasar"}
+    <TabDasar />
+  {:else if activeBetType === "Shio"}
+    <TabShio />
+  {/if}
 
-    {#if bets.length > 0}
-      <div class="mt-4 flex items-center justify-between">
-        <div>
-          <p class="text-muted-foreground text-xs">Total Belanja</p>
-          <p class="text-lg font-semibold">{formatIDR(totalBelanja)}</p>
-          <p class="text-muted-foreground text-xs">Total Row : {bets.length}</p>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <Button
-            variant="outline"
-            class="cursor-pointer text-destructive"
-            onclick={() => (bets = [])}
-          >
-            <Trash2 />
-            Clear
-          </Button>
-          <Button
-            class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
-            onclick={handleCheckoutClick}
-          >
-            <ShoppingCart />
-            Checkout
-          </Button>
-        </div>
+  {#if bets.length > 0}
+    <div class="mt-4 flex items-center justify-between">
+      <div>
+        <p class="text-muted-foreground text-xs">Total Belanja</p>
+        <p class="text-lg font-semibold">{formatIDR(totalBelanja)}</p>
+        <p class="text-muted-foreground text-xs">Total Row : {bets.length}</p>
       </div>
-
-      <div class="relative mt-3">
-        <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-        <Input
-          type="text"
-          inputmode="numeric"
-          placeholder="Cari nomor"
-          class="pl-8"
-          bind:value={searchQuery}
-        />
+      <div class="flex shrink-0 items-center gap-2">
+        <Button
+          variant="outline"
+          class="cursor-pointer text-destructive"
+          onclick={() => (bets = [])}
+        >
+          <Trash2 />
+          Clear
+        </Button>
+        <Button
+          class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
+          onclick={handleCheckoutClick}
+        >
+          <ShoppingCart />
+          Checkout
+        </Button>
       </div>
+    </div>
 
-      <div class="mt-2 -mx-4 flex scrollbar-none items-center gap-2 overflow-x-auto px-4 pb-1">
-        {#each betTypeCounts as { type, count } (type)}
-          <button
-            type="button"
-            class={cn(
-              "shrink-0 cursor-pointer rounded-full border px-2 py-0.5 text-xs backdrop-blur-sm",
-              activeTypeFilter === type
-                ? "border-green-800 bg-green-700 text-white"
-                : "border-green-200 bg-green-100/70 text-green-700",
-            )}
-            onclick={() => handleTypeFilterClick(type)}
-          >
-            {type} :
-            {#key count}
-              <span class="inline-block" in:scale={{ duration: 250, start: 0.4 }}>{count}</span>
-            {/key}
-          </button>
-        {/each}
-      </div>
+    <div class="relative mt-3">
+      <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+      <Input
+        type="text"
+        inputmode="numeric"
+        placeholder="Cari nomor"
+        class="pl-8"
+        bind:value={searchQuery}
+      />
+    </div>
 
-      {#if activeTypeFilter}
+    <div class="mt-2 -mx-4 flex scrollbar-none items-center gap-2 overflow-x-auto px-4 pb-1">
+      {#each betTypeCounts as { type, count } (type)}
         <button
           type="button"
-          aria-label="Bersihkan filter"
-          class="mt-2 w-fit cursor-pointer rounded-full border border-red-200 bg-red-50 p-1 text-red-600 hover:bg-red-100"
-          onclick={() => (activeTypeFilter = null)}
+          class={cn(
+            "shrink-0 cursor-pointer rounded-full border px-2 py-0.5 text-xs backdrop-blur-sm",
+            activeTypeFilter === type
+              ? "border-green-800 bg-green-700 text-white"
+              : "border-green-200 bg-green-100/70 text-green-700",
+          )}
+          onclick={() => handleTypeFilterClick(type)}
         >
-          <X class="size-3.5" />
+          {type} :
+          {#key count}
+            <span class="inline-block" in:scale={{ duration: 250, start: 0.4 }}>{count}</span>
+          {/key}
         </button>
-      {/if}
+      {/each}
+    </div>
 
-      <div class="mt-3 flex flex-col gap-2">
-        {#each filteredBets as entry (entry.id)}
-          <div class="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
-              <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
-            </div>
-            {#if entry.deletable !== false}
-              <Button
-                size="icon"
-                variant="ghost"
-                class="text-destructive cursor-pointer"
-                aria-label="Hapus"
-                onclick={() => handleDeleteBet(entry.id)}
-              >
-                <Trash2 />
-              </Button>
-            {/if}
-          </div>
-        {/each}
-      </div>
+    {#if activeTypeFilter}
+      <button
+        type="button"
+        aria-label="Bersihkan filter"
+        class="mt-2 w-fit cursor-pointer rounded-full border border-red-200 bg-red-50 p-1 text-red-600 hover:bg-red-100"
+        onclick={() => (activeTypeFilter = null)}
+      >
+        <X class="size-3.5" />
+      </button>
     {/if}
+
+    <div class="mt-3 flex flex-col gap-2">
+      {#each filteredBets as entry (entry.id)}
+        <div class="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
+            <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+          </div>
+          {#if entry.deletable !== false}
+            <Button
+              size="icon"
+              variant="ghost"
+              class="text-destructive cursor-pointer"
+              aria-label="Hapus"
+              onclick={() => handleDeleteBet(entry.id)}
+            >
+              <Trash2 />
+            </Button>
+          {/if}
+        </div>
+      {/each}
+    </div>
   {/if}
 </main>
 
@@ -869,25 +331,6 @@
   </AlertDialogContent>
 </AlertDialog>
 
-<AlertDialog bind:open={bolakBalikGuardOpen}>
-  <AlertDialogContent onCloseAutoFocus={(e: Event) => e.preventDefault()}>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Informasi</AlertDialogTitle>
-      <AlertDialogDescription>
-        Harap melakukan checkout sebelum melakukan belanja bolak balik.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel class="cursor-pointer" onclick={handleGuardCancel}>
-        Batalkan
-      </AlertDialogCancel>
-      <AlertDialogAction class="cursor-pointer" onclick={handleGuardCheckout}>
-        Checkout
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
-
 <Dialog bind:open={transaksiModalOpen}>
   <DialogContent>
     <DialogHeader>
@@ -926,4 +369,9 @@
   </DialogContent>
 </Dialog>
 
-<BottomNav onTransaksiClick={() => (transaksiModalOpen = true)} />
+<CameraOcr bind:open={cameraOcrOpen} bind:bets bind:minBetAlertOpen />
+
+<BottomNav
+  onTransaksiClick={() => (transaksiModalOpen = true)}
+  onCameraClick={() => (cameraOcrOpen = true)}
+/>
