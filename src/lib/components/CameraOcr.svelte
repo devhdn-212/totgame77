@@ -184,6 +184,15 @@
     </DialogHeader>
 
     {#if status === "idle"}
+      <div class="bg-muted/50 rounded-lg border p-3 text-xs">
+        <p class="text-muted-foreground mb-1 font-medium">Contoh format tulisan:</p>
+        <pre class="font-mono leading-relaxed">4D 4535 : 500
+3D 535 : 500
+2D 35 : 500 x 2</pre>
+        <p class="text-muted-foreground mt-1">
+          Satu baris = satu nomor. "x 2" di akhir baris artinya beli nomor itu 2x (opsional).
+        </p>
+      </div>
       <Button class="w-full cursor-pointer" onclick={handleTriggerCamera}>
         <Camera />
         Ambil Foto
