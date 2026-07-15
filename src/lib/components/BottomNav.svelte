@@ -3,7 +3,10 @@
 	import Receipt from "@lucide/svelte/icons/receipt";
 	import ShoppingBag from "@lucide/svelte/icons/shopping-bag";
 
-	let { active = $bindable("transaksi") }: { active?: string } = $props();
+	let {
+		active = $bindable("transaksi"),
+		onTransaksiClick,
+	}: { active?: string; onTransaksiClick?: () => void } = $props();
 
 	const items = [
 		{ key: "transaksi", label: "Transaksi", href: "#/transaksi", icon: Receipt },
@@ -23,7 +26,13 @@
 					"flex flex-1 flex-col items-center gap-1 py-2 text-xs",
 					active === item.key ? "text-primary" : "text-muted-foreground",
 				)}
-				onclick={() => (active = item.key)}
+				onclick={(e) => {
+					active = item.key;
+					if (item.key === "transaksi") {
+						e.preventDefault();
+						onTransaksiClick?.();
+					}
+				}}
 			>
 				<Icon class="size-5" />
 				{item.label}

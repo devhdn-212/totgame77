@@ -107,7 +107,7 @@
 
 "@lucide/svelte@^1.24.0":
   version "1.24.0"
-  resolved "https://registry.npmjs.org/@lucide/svelte/-/svelte-1.24.0.tgz"
+  resolved "https://registry.yarnpkg.com/@lucide/svelte/-/svelte-1.24.0.tgz#cfa5e9910eaebd0af5b8710702ab65a051f11a50"
   integrity sha512-yXwewA7ANQ5hfaSDrvsecosWjZn5RglzeXUZRSnxeANBskpNwblOkEJTqD0ujDdNKIKL8E9eVc2U/P3ziJr7OA==
 
 "@napi-rs/wasm-runtime@^1.1.4", "@napi-rs/wasm-runtime@^1.1.6":
