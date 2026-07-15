@@ -84,8 +84,14 @@
   function parseRawText(text: string): ParsedRow[] {
     const rows: ParsedRow[] = [];
     for (const line of text.split("\n")) {
-      const match = line.match(/(\d{2,4})\s*[:;.]\s*(\d{2,})\s*$/);
-      if (match) rows.push({ id: crypto.randomUUID(), number: match[1], bet: match[2] });
+      // Take the last two digit-groups on the line as (number, bet),
+      // regardless of what separates them (":", ".", or just whitespace) —
+      // label prefixes like "4D" only ever contribute a single stray digit.
+      const groups = line.match(/\d{2,}/g);
+      if (!groups || groups.length < 2) continue;
+      const bet = groups[groups.length - 1];
+      const number = groups[groups.length - 2];
+      rows.push({ id: crypto.randomUUID(), number, bet });
     }
     return rows;
   }
