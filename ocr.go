@@ -16,6 +16,8 @@ import (
 
 const ocrPrompt = `Kamu membaca foto kertas taruhan togel/lotere tulisan tangan. Tiap baris berisi label (4D/3D/2D), nomor, dan nilai taruhan (bet), dalam urutan dan pemisah apapun (titik dua, spasi, dsb).
 
+Kadang ada tanda kali di akhir baris seperti "x2", "x 2", atau "×2" — itu artinya nomor & bet yang sama itu dibeli sebanyak itu kali (BUKAN bet-nya dikalikan). Contoh: "4D 4535 : 500 x 2" berarti keluarkan DUA entry terpisah yang identik: {"number": "4535", "bet": "500"} dan {"number": "4535", "bet": "500"} — bukan satu entry dengan bet "1000".
+
 Baca setiap baris dan keluarkan HANYA JSON array (tanpa markdown, tanpa penjelasan), setiap item berbentuk:
 {"number": "<nomor sebagai digit saja>", "bet": "<nilai bet sebagai digit saja>"}
 
