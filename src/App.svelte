@@ -5,7 +5,14 @@
   import { Card, CardContent } from "$lib/components/ui/card";
   import { Tabs, TabsList, TabsTrigger, TabsContent } from "$lib/components/ui/tabs";
   import { Input } from "$lib/components/ui/input";
+  import { Textarea } from "$lib/components/ui/textarea";
   import { RadioGroup, RadioGroupItem } from "$lib/components/ui/radio-group";
+  import {
+    Select,
+    SelectTrigger,
+    SelectContent,
+    SelectItem,
+  } from "$lib/components/ui/select";
   import {
     AlertDialog,
     AlertDialogContent,
@@ -367,6 +374,129 @@
     bbBetInput = "500";
   }
 
+  let wapInput = $state("");
+  let wapFormError = $state("");
+
+  function handleWapInput(e: Event) {
+    const target = e.currentTarget as HTMLTextAreaElement;
+    const filtered = target.value.replace(/[^0-9*#,]/g, "");
+    wapInput = filtered;
+    target.value = filtered;
+    wapFormError = "";
+  }
+
+  function classifyByLength(number: string) {
+    if (number.length === 4) return "4D";
+    if (number.length === 3) return "3D";
+    if (number.length === 2) return "2D";
+    return null;
+  }
+
+  function handleAddWap() {
+    const raw = wapInput.trim();
+    if (raw.length === 0) {
+      wapFormError = "Nomor wajib diisi";
+      return;
+    }
+
+    const groups = raw.split(",").filter((g) => g.trim() !== "");
+    if (groups.length === 0) {
+      wapFormError = "Nomor wajib diisi";
+      return;
+    }
+
+    type ParsedEntry = { type: string; number: string; bet: string };
+    const parsed: ParsedEntry[] = [];
+
+    for (const group of groups) {
+      const [numbersPart, betPart] = group.split("#");
+
+      if (!betPart || !/^[1-9]\d*$/.test(betPart)) {
+        wapFormError = `Bet wajib diisi (format nomor#bet) pada "${group}"`;
+        return;
+      }
+      const bet = betPart;
+      if (Number(bet) < MIN_BET) {
+        minBetAlertOpen = true;
+        return;
+      }
+
+      const numbers = (numbersPart ?? "").split("*").filter((n) => n !== "");
+      if (numbers.length === 0) {
+        wapFormError = `Nomor tidak valid pada "${group}"`;
+        return;
+      }
+
+      for (const number of numbers) {
+        const type = classifyByLength(number);
+        if (!type) {
+          wapFormError = `Nomor "${number}" harus 2-4 digit`;
+          return;
+        }
+        parsed.push({ type, number, bet });
+      }
+    }
+
+    wapFormError = "";
+    const newEntries = parsed.map((entry) => ({
+      id: crypto.randomUUID(),
+      type: entry.type,
+      number: entry.number,
+      bet: entry.bet,
+    }));
+    bets = [...newEntries, ...bets];
+
+    wapInput = "";
+  }
+
+  const QUICK_KONDISI_OPTIONS = ["BESAR", "KECIL", "GANJIL", "GENAP"];
+  const QUICK_PASARAN_OPTIONS = ["2D", "2DD", "2DT"];
+
+  let quickKondisi = $state("BESAR");
+  let quickPasaran = $state("2D");
+  let quickBetInput = $state("500");
+  let quickFormError = $state("");
+
+  function handleQuickBetInput(e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const digitsOnly = target.value.replace(/\D/g, "");
+    quickBetInput = digitsOnly;
+    target.value = digitsOnly;
+    quickFormError = "";
+  }
+
+  function handleAddQuick2D() {
+    if (!/^[1-9]\d*$/.test(quickBetInput)) {
+      quickFormError = "Bet wajib diisi dengan angka";
+      return;
+    }
+    if (Number(quickBetInput) < MIN_BET) {
+      minBetAlertOpen = true;
+      return;
+    }
+
+    const numbers: string[] = [];
+    for (let n = 0; n <= 99; n++) {
+      const matches =
+        (quickKondisi === "BESAR" && n > 49) ||
+        (quickKondisi === "KECIL" && n < 50) ||
+        (quickKondisi === "GANJIL" && n % 2 === 1) ||
+        (quickKondisi === "GENAP" && n % 2 === 0);
+      if (matches) numbers.push(String(n).padStart(2, "0"));
+    }
+
+    quickFormError = "";
+    const newEntries = numbers.map((number) => ({
+      id: crypto.randomUUID(),
+      type: quickPasaran,
+      number,
+      bet: quickBetInput,
+    }));
+    bets = [...newEntries, ...bets];
+
+    quickBetInput = "500";
+  }
+
   let searchQuery = $state("");
   let activeTypeFilter = $state<string | null>(null);
 
@@ -638,6 +768,69 @@
             {/if}
             {#if bbWarning}
               <p class="mt-1 text-xs text-amber-600">{bbWarning}</p>
+            {/if}
+          {:else if tab === "WAP"}
+            <div class="flex flex-col gap-2">
+              <Textarea
+                placeholder="contoh : 1234*234*34#1000,34*235*35#5000"
+                class="min-h-24"
+                value={wapInput}
+                oninput={handleWapInput}
+              />
+              <Button
+                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
+                onclick={handleAddWap}
+              >
+                <Plus />
+                Tambah
+              </Button>
+            </div>
+            {#if wapFormError}
+              <p class="text-destructive mt-1 text-xs">{wapFormError}</p>
+            {/if}
+          {:else if tab === "QUICK 2D"}
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center gap-2">
+                <Select type="single" bind:value={quickKondisi}>
+                  <SelectTrigger class="w-full">
+                    {quickKondisi}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {#each QUICK_KONDISI_OPTIONS as option (option)}
+                      <SelectItem value={option}>{option}</SelectItem>
+                    {/each}
+                  </SelectContent>
+                </Select>
+                <Select type="single" bind:value={quickPasaran}>
+                  <SelectTrigger class="w-full">
+                    {quickPasaran}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {#each QUICK_PASARAN_OPTIONS as option (option)}
+                      <SelectItem value={option}>{option}</SelectItem>
+                    {/each}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="Bet"
+                class="text-center"
+                value={quickBetInput}
+                oninput={handleQuickBetInput}
+              />
+              <Button
+                class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
+                onclick={handleAddQuick2D}
+              >
+                <Plus />
+                Tambah
+              </Button>
+            </div>
+            {#if quickFormError}
+              <p class="text-destructive mt-1 text-xs">{quickFormError}</p>
             {/if}
           {:else}
             <p class="text-muted-foreground">{tab}</p>
