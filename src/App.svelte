@@ -8,6 +8,7 @@
   import TabDasar from "$lib/components/TabDasar.svelte";
   import TabShio from "$lib/components/TabShio.svelte";
   import CameraOcr from "$lib/components/CameraOcr.svelte";
+  import BukuMimpi from "$lib/components/BukuMimpi.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Card, CardContent } from "$lib/components/ui/card";
   import { Tabs, TabsList, TabsTrigger, TabsContent } from "$lib/components/ui/tabs";
@@ -125,6 +126,7 @@
 
   let transaksiModalOpen = $state(false);
   let cameraOcrOpen = $state(false);
+  let bukuMimpiOpen = $state(false);
 
   let transaksiGroups = $derived(
     BET_TYPE_LABELS.map((type) => {
@@ -377,8 +379,10 @@
 </Dialog>
 
 <CameraOcr bind:open={cameraOcrOpen} bind:bets bind:minBetAlertOpen />
+<BukuMimpi bind:open={bukuMimpiOpen} />
 
 <BottomNav
   onTransaksiClick={() => (transaksiModalOpen = true)}
   onCameraClick={() => (cameraOcrOpen = true)}
+  onBukuMimpiClick={() => (bukuMimpiOpen = true)}
 />

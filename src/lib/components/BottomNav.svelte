@@ -1,19 +1,25 @@
 <script lang="ts">
 	import { cn } from "$lib/utils";
 	import Receipt from "@lucide/svelte/icons/receipt";
-	import ShoppingBag from "@lucide/svelte/icons/shopping-bag";
+	import BookOpen from "@lucide/svelte/icons/book-open";
 	import Camera from "@lucide/svelte/icons/camera";
 
 	let {
 		active = $bindable("transaksi"),
 		onTransaksiClick,
 		onCameraClick,
-	}: { active?: string; onTransaksiClick?: () => void; onCameraClick?: () => void } = $props();
+		onBukuMimpiClick,
+	}: {
+		active?: string;
+		onTransaksiClick?: () => void;
+		onCameraClick?: () => void;
+		onBukuMimpiClick?: () => void;
+	} = $props();
 
 	const items = [
 		{ key: "transaksi", label: "Transaksi", href: "#/transaksi", icon: Receipt },
 		{ key: "camera", label: "Camera", href: "#/camera", icon: Camera },
-		{ key: "belanja", label: "Belanja", href: "#/belanja", icon: ShoppingBag },
+		{ key: "bukumimpi", label: "Buku Mimpi", href: "#/bukumimpi", icon: BookOpen },
 	];
 </script>
 
@@ -37,6 +43,9 @@
 					} else if (item.key === "camera") {
 						e.preventDefault();
 						onCameraClick?.();
+					} else if (item.key === "bukumimpi") {
+						e.preventDefault();
+						onBukuMimpiClick?.();
 					}
 				}}
 			>

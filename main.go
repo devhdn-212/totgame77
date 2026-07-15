@@ -27,11 +27,13 @@ func main() {
 	}
 
 	ocr := newOcrHandler(apiKey, model)
+	bukuMimpi := newBukuMimpiHandler()
 
 	app := fiber.New()
 
 	api := app.Group("/api")
 	api.Post("/ocr/scan", ocr.Scan)
+	api.Post("/bukumimpi", bukuMimpi.Search)
 
 	// Serve the built Svelte SPA (run `yarn build` first) and fall back to
 	// index.html so client-side routes resolve on refresh.
