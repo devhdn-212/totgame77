@@ -12,7 +12,7 @@
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import { createWorker } from "tesseract.js";
+  import { createWorker, PSM } from "tesseract.js";
 
   type BetEntry = {
     id: string;
@@ -83,9 +83,9 @@
 
   function parseRawText(text: string): ParsedRow[] {
     const rows: ParsedRow[] = [];
-    const matches = text.matchAll(/(\d{2,4})\D+(\d{2,})/g);
-    for (const match of matches) {
-      rows.push({ id: crypto.randomUUID(), number: match[1], bet: match[2] });
+    for (const line of text.split("\n")) {
+      const match = line.match(/(\d{2,4})\s*[:;.]\s*(\d{2,})\s*$/);
+      if (match) rows.push({ id: crypto.randomUUID(), number: match[1], bet: match[2] });
     }
     return rows;
   }
@@ -138,15 +138,31 @@
           if (m.status === "recognizing text") progress = Math.round(m.progress * 100);
         },
       });
-      const { data } = await worker.recognize(processed);
+      await worker.setParameters({
+        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+        tessedit_char_whitelist: "0123456789Dd:;.- ",
+      });
+
+      const first = await worker.recognize(processed);
+      let rows = parseRawText(first.data.text);
+
+      // Preprocessing can occasionally hurt more than it helps on unusual
+      // source images — fall back to the raw photo before giving up.
+      if (rows.length === 0) {
+        progress = 0;
+        const second = await worker.recognize(source);
+        rows = parseRawText(second.data.text);
+      }
+
       await worker.terminate();
 
-      parsedRows = parseRawText(data.text);
+      parsedRows = rows;
       status = "done";
       if (parsedRows.length === 0) {
         errorMessage = "Tidak ada nomor yang terbaca. Coba foto ulang dengan tulisan lebih jelas.";
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       status = "error";
       errorMessage = "Gagal membaca gambar. Coba lagi.";
     }
