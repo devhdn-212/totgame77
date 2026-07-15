@@ -106,7 +106,10 @@
             onkeydown={(e) => e.key === "Enter" && handleSearchClick()}
           />
         </div>
-        <Button class="w-full cursor-pointer" onclick={handleSearchClick}>
+        <Button
+          class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
+          onclick={handleSearchClick}
+        >
           <Search />
           Search
         </Button>
