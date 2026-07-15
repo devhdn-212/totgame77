@@ -36,24 +36,59 @@
 
   const MIN_BET = 500;
 
+  let videoEl: HTMLVideoElement | null = $state(null);
   let fileInput: HTMLInputElement | null = $state(null);
+  let mediaStream: MediaStream | null = null;
+
   let imageUrl = $state("");
-  let status = $state<"idle" | "recognizing" | "done" | "error">("idle");
+  let status = $state<"idle" | "camera-live" | "recognizing" | "done" | "error">("idle");
+  let cameraError = $state("");
   let progress = $state(0);
-  let rawText = $state("");
   let parsedRows = $state<ParsedRow[]>([]);
   let errorMessage = $state("");
 
+  function stopCamera() {
+    mediaStream?.getTracks().forEach((track) => track.stop());
+    mediaStream = null;
+  }
+
   function reset() {
+    stopCamera();
     imageUrl = "";
     status = "idle";
+    cameraError = "";
     progress = 0;
-    rawText = "";
     parsedRows = [];
     errorMessage = "";
   }
 
-  function handleTriggerCapture() {
+  async function handleOpenCamera() {
+    reset();
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      status = "camera-live";
+      if (videoEl) videoEl.srcObject = mediaStream;
+    } catch {
+      cameraError = "Tidak bisa mengakses kamera. Izinkan akses kamera, atau pilih foto dari galeri.";
+    }
+  }
+
+  function handleCaptureShot() {
+    if (!videoEl) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = videoEl.videoWidth;
+    canvas.height = videoEl.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx?.drawImage(videoEl, 0, 0);
+    stopCamera();
+    canvas.toBlob((blob) => {
+      if (blob) runOcr(blob);
+    }, "image/png");
+  }
+
+  function handleGalleryPick() {
     reset();
     fileInput?.click();
   }
@@ -85,14 +120,8 @@
     return rows;
   }
 
-  async function handleFileSelected(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const file = target.files?.[0];
-    target.value = "";
-    if (!file) return;
-
-    reset();
-    imageUrl = URL.createObjectURL(file);
+  async function runOcr(source: Blob) {
+    imageUrl = URL.createObjectURL(source);
     status = "recognizing";
     errorMessage = "";
 
@@ -102,19 +131,26 @@
           if (m.status === "recognizing text") progress = Math.round(m.progress * 100);
         },
       });
-      const { data } = await worker.recognize(file);
+      const { data } = await worker.recognize(source);
       await worker.terminate();
 
-      rawText = data.text;
       parsedRows = parseRawText(data.text);
       status = "done";
       if (parsedRows.length === 0) {
         errorMessage = "Tidak ada nomor yang terbaca. Coba foto ulang dengan tulisan lebih jelas.";
       }
-    } catch (err) {
+    } catch {
       status = "error";
       errorMessage = "Gagal membaca gambar. Coba lagi.";
     }
+  }
+
+  function handleFileSelected(e: Event) {
+    const target = e.currentTarget as HTMLInputElement;
+    const file = target.files?.[0];
+    target.value = "";
+    if (!file) return;
+    runOcr(file);
   }
 
   function handleRemoveRow(id: string) {
@@ -155,18 +191,25 @@
     open = false;
     reset();
   }
+
+  function handleDialogOpenChange(next: boolean) {
+    if (!next) reset();
+  }
+
+  $effect(() => {
+    if (!open) stopCamera();
+  });
 </script>
 
 <input
   bind:this={fileInput}
   type="file"
   accept="image/*"
-  capture="environment"
   class="hidden"
   onchange={handleFileSelected}
 />
 
-<Dialog bind:open>
+<Dialog bind:open onOpenChange={handleDialogOpenChange}>
   <DialogContent>
     <DialogHeader>
       <DialogTitle>Scan Nomor</DialogTitle>
@@ -176,9 +219,26 @@
     </DialogHeader>
 
     {#if status === "idle"}
-      <Button class="w-full cursor-pointer" onclick={handleTriggerCapture}>
+      <Button class="w-full cursor-pointer" onclick={handleOpenCamera}>
         <Camera />
-        Ambil Foto
+        Buka Kamera
+      </Button>
+      {#if cameraError}
+        <p class="text-destructive text-xs">{cameraError}</p>
+      {/if}
+      <button
+        type="button"
+        class="text-muted-foreground cursor-pointer text-center text-xs underline"
+        onclick={handleGalleryPick}
+      >
+        atau pilih foto dari galeri
+      </button>
+    {:else if status === "camera-live"}
+      <!-- svelte-ignore a11y_media_has_caption -->
+      <video bind:this={videoEl} autoplay playsinline class="w-full rounded-lg border"></video>
+      <Button class="w-full cursor-pointer" onclick={handleCaptureShot}>
+        <Camera />
+        Jepret
       </Button>
     {:else}
       {#if imageUrl}
@@ -192,7 +252,7 @@
         </div>
       {:else if status === "error"}
         <p class="text-destructive text-xs">{errorMessage}</p>
-        <Button variant="outline" class="w-full cursor-pointer" onclick={handleTriggerCapture}>
+        <Button variant="outline" class="w-full cursor-pointer" onclick={handleOpenCamera}>
           Coba Lagi
         </Button>
       {:else if status === "done"}
@@ -221,7 +281,7 @@
           </div>
         {/if}
         <div class="flex gap-2">
-          <Button variant="outline" class="flex-1 cursor-pointer" onclick={handleTriggerCapture}>
+          <Button variant="outline" class="flex-1 cursor-pointer" onclick={handleOpenCamera}>
             Foto Ulang
           </Button>
           <Button
