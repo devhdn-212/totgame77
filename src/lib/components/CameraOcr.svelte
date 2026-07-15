@@ -90,18 +90,55 @@
     return rows;
   }
 
+  // Normalizes lighting/contrast/polarity so real-world phone photos (dark
+  // backgrounds, glare, low contrast) read as reliably as a clean scan.
+  async function preprocessImage(source: Blob): Promise<Blob> {
+    const bitmap = await createImageBitmap(source);
+    const scale = bitmap.width < 900 ? 2 : 1;
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width * scale;
+    canvas.height = bitmap.height * scale;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return source;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      data[i] = data[i + 1] = data[i + 2] = gray;
+      sum += gray;
+    }
+    const avg = sum / (data.length / 4);
+    const backgroundDark = avg < 128;
+    const margin = 20;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const g = data[i];
+      const isText = backgroundDark ? g > avg + margin : g < avg - margin;
+      const v = isText ? 0 : 255;
+      data[i] = data[i + 1] = data[i + 2] = v;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob ?? source), "image/png"));
+  }
+
   async function runOcr(source: Blob) {
     imageUrl = URL.createObjectURL(source);
     status = "recognizing";
     errorMessage = "";
 
     try {
+      const processed = await preprocessImage(source);
       const worker = await createWorker("eng", 1, {
         logger: (m) => {
           if (m.status === "recognizing text") progress = Math.round(m.progress * 100);
         },
       });
-      const { data } = await worker.recognize(source);
+      const { data } = await worker.recognize(processed);
       await worker.terminate();
 
       parsedRows = parseRawText(data.text);
