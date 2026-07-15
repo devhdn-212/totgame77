@@ -15,10 +15,10 @@ func main() {
 		log.Println("No .env file found, relying on real environment variables")
 	}
 
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
-	model := os.Getenv("ANTHROPIC_MODEL")
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	model := os.Getenv("GEMINI_MODEL")
 	if model == "" {
-		model = "claude-sonnet-5"
+		model = "gemini-3.1-flash-lite"
 	}
 
 	port := os.Getenv("PORT")

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,9 +11,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"google.golang.org/genai"
 )
-
-const anthropicMessagesURL = "https://api.anthropic.com/v1/messages"
 
 const ocrPrompt = `Kamu membaca foto kertas taruhan togel/lotere tulisan tangan. Tiap baris berisi label (4D/3D/2D), nomor, dan nilai taruhan (bet), dalam urutan dan pemisah apapun (titik dua, spasi, dsb).
 
@@ -35,47 +32,13 @@ type apiResponse struct {
 	Record  any    `json:"record"`
 }
 
-type claudeContentBlock struct {
-	Type   string `json:"type"`
-	Text   string `json:"text,omitempty"`
-	Source *struct {
-		Type      string `json:"type"`
-		MediaType string `json:"media_type"`
-		Data      string `json:"data"`
-	} `json:"source,omitempty"`
-}
-
-type claudeMessage struct {
-	Role    string                `json:"role"`
-	Content []claudeContentBlock `json:"content"`
-}
-
-type claudeRequest struct {
-	Model     string          `json:"model"`
-	MaxTokens int             `json:"max_tokens"`
-	Messages  []claudeMessage `json:"messages"`
-}
-
-type claudeResponse struct {
-	Content []claudeContentBlock `json:"content"`
-	Error   *struct {
-		Type    string `json:"type"`
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
-}
-
 type ocrHandler struct {
-	apiKey     string
-	model      string
-	httpClient *http.Client
+	apiKey string
+	model  string
 }
 
 func newOcrHandler(apiKey, model string) *ocrHandler {
-	return &ocrHandler{
-		apiKey:     apiKey,
-		model:      model,
-		httpClient: &http.Client{Timeout: 25 * time.Second},
-	}
+	return &ocrHandler{apiKey: apiKey, model: model}
 }
 
 func (h *ocrHandler) Scan(c *fiber.Ctx) error {
@@ -122,78 +85,32 @@ func (h *ocrHandler) Scan(c *fiber.Ctx) error {
 
 func (h *ocrHandler) scanBetSlip(ctx context.Context, imageBytes []byte, mimeType string) ([]ocrRow, error) {
 	if h.apiKey == "" {
-		return nil, fmt.Errorf("ANTHROPIC_API_KEY is not configured")
+		return nil, fmt.Errorf("GEMINI_API_KEY is not configured")
 	}
 
-	reqBody := claudeRequest{
-		Model:     h.model,
-		MaxTokens: 1024,
-		Messages: []claudeMessage{
-			{
-				Role: "user",
-				Content: []claudeContentBlock{
-					{
-						Type: "image",
-						Source: &struct {
-							Type      string `json:"type"`
-							MediaType string `json:"media_type"`
-							Data      string `json:"data"`
-						}{
-							Type:      "base64",
-							MediaType: mimeType,
-							Data:      base64.StdEncoding.EncodeToString(imageBytes),
-						},
-					},
-					{Type: "text", Text: ocrPrompt},
-				},
-			},
-		},
-	}
-
-	payload, err := json.Marshal(reqBody)
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:  h.apiKey,
+		Backend: genai.BackendGeminiAPI,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
+		return nil, fmt.Errorf("create genai client: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, anthropicMessagesURL, bytes.NewReader(payload))
+	parts := []*genai.Part{
+		{InlineData: &genai.Blob{MIMEType: mimeType, Data: imageBytes}},
+		{Text: ocrPrompt},
+	}
+	contents := []*genai.Content{{Role: "user", Parts: parts}}
+
+	res, err := client.Models.GenerateContent(ctx, h.model, contents, nil)
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("content-type", "application/json")
-	req.Header.Set("x-api-key", h.apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-
-	res, err := h.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("call anthropic api: %w", err)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
+		return nil, fmt.Errorf("call gemini api: %w", err)
 	}
 
-	var parsed claudeResponse
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		if parsed.Error != nil {
-			return nil, fmt.Errorf("anthropic api error: %s", parsed.Error.Message)
-		}
-		return nil, fmt.Errorf("anthropic api returned status %d", res.StatusCode)
-	}
-
-	if len(parsed.Content) == 0 {
-		return []ocrRow{}, nil
-	}
-
-	return extractRows(parsed.Content[0].Text)
+	return extractRows(res.Text())
 }
 
-// Claude is asked to return raw JSON but may still wrap it in prose or a
+// Gemini is asked to return raw JSON but may still wrap it in prose or a
 // markdown fence, so pull out the first top-level array before decoding.
 func extractRows(text string) ([]ocrRow, error) {
 	start := strings.IndexByte(text, '[')
