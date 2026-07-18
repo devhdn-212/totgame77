@@ -57,7 +57,8 @@
 
   let totalBelanja = $derived(
     bets.reduce(
-      (sum, entry) => sum.plus(calculatePayout(entry.type, entry.bet, entry.kombinasi).payout),
+      (sum, entry) =>
+        sum.plus(calculatePayout(entry.type, entry.number, entry.bet, entry.kombinasi).payout),
       new Decimal(0),
     ),
   );

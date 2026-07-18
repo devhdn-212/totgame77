@@ -15,10 +15,13 @@
     activeBetType: string;
   } = $props();
 
-  type InfoTable = { columns: string[]; rows: { label: string; values: string[] }[] };
+  type InfoContent =
+    | { kind: "table"; columns: string[]; rows: { label: string; values: string[] }[] }
+    | { kind: "sections"; sections: { title: string; items: { label: string; value: string }[] }[] };
 
-  const INFO_TABLES: Record<string, InfoTable | null> = {
+  const INFO_CONTENT: Record<string, InfoContent | null> = {
     "4D/3D/2D": {
+      kind: "table",
       columns: ["4D", "3D", "3DD", "2D", "2DD", "2DT"],
       rows: [
         { label: "Hadiah Diskon", values: ["3000X", "400X", "355X", "70X", "65X", "65X"] },
@@ -28,14 +31,120 @@
         { label: "Diskon", values: ["66%", "59%", "56%", "29%", "26%", "26%"] },
       ],
     },
-    Colok: null,
-    "5050": null,
-    "Macau/Kombinasi": null,
-    Dasar: null,
-    Shio: null,
+    Colok: {
+      kind: "sections",
+      sections: [
+        {
+          title: "Colok Bebas",
+          items: [
+            { label: "Hadiah", value: "1.53x" },
+            { label: "Disc", value: "6%" },
+          ],
+        },
+        {
+          title: "Colok Macau",
+          items: [
+            { label: "Hadiah 2 Digit", value: "6.5x" },
+            { label: "Hadiah 3 Digit", value: "11x" },
+            { label: "Hadiah 4 Digit", value: "18x" },
+            { label: "Disc", value: "10%" },
+          ],
+        },
+        {
+          title: "Colok Naga",
+          items: [
+            { label: "Hadiah 3 Digit", value: "25x" },
+            { label: "Hadiah 4 Digit", value: "37x" },
+            { label: "Disc", value: "10%" },
+          ],
+        },
+        {
+          title: "Colok Jitu",
+          items: [
+            { label: "Hadiah As", value: "8x" },
+            { label: "Hadiah Kop", value: "8x" },
+            { label: "Hadiah Kepala", value: "8x" },
+            { label: "Hadiah Ekor", value: "8x" },
+            { label: "Disc", value: "5%" },
+          ],
+        },
+      ],
+    },
+    "5050": {
+      kind: "sections",
+      sections: [
+        {
+          title: "Umum",
+          items: [
+            { label: "Hadiah", value: "1x" },
+            { label: "Disc", value: "2%" },
+            { label: "Kei", value: "-1.5%" },
+          ],
+        },
+        {
+          title: "Special",
+          items: [
+            { label: "Hadiah", value: "1x" },
+            { label: "Disc", value: "1.5%" },
+            { label: "Kei", value: "-2.5%" },
+          ],
+        },
+        {
+          title: "Kombinasi",
+          items: [
+            { label: "Hadiah", value: "1x" },
+            { label: "Disc", value: "1.5%" },
+            { label: "Kei", value: "-2.5%" },
+          ],
+        },
+      ],
+    },
+    "Macau/Kombinasi": {
+      kind: "sections",
+      sections: [
+        {
+          title: "Macau/Kombinasi",
+          items: [
+            { label: "Hadiah", value: "2.7x" },
+            { label: "Disc", value: "5%" },
+          ],
+        },
+      ],
+    },
+    Dasar: {
+      kind: "sections",
+      sections: [
+        {
+          title: "Dasar",
+          items: [
+            { label: "Hadiah", value: "1x" },
+            { label: "Disc Besar", value: "0%" },
+            { label: "Disc Kecil", value: "0%" },
+            { label: "Disc Genap", value: "0%" },
+            { label: "Disc Ganjil", value: "0%" },
+            { label: "Kei Besar", value: "-25%" },
+            { label: "Kei Kecil", value: "0%" },
+            { label: "Kei Genap", value: "-25%" },
+            { label: "Kei Ganjil", value: "0%" },
+          ],
+        },
+      ],
+    },
+    Shio: {
+      kind: "sections",
+      sections: [
+        {
+          title: "Shio",
+          items: [
+            { label: "Hadiah", value: "9x" },
+            { label: "Disc", value: "8%" },
+          ],
+        },
+      ],
+    },
   };
 
-  let table = $derived(INFO_TABLES[activeBetType] ?? null);
+  let content = $derived(INFO_CONTENT[activeBetType] ?? null);
 </script>
 
 <Dialog bind:open>
@@ -45,28 +154,44 @@
       <DialogDescription>Tabel hadiah dan diskon untuk permainan {activeBetType}</DialogDescription>
     </DialogHeader>
 
-    {#if table}
+    {#if content?.kind === "table"}
       <div class="overflow-x-auto">
         <table class="w-full min-w-max border-collapse text-xs">
           <thead>
             <tr>
               <th class="border-b p-2 text-left font-medium"></th>
-              {#each table.columns as col (col)}
+              {#each content.columns as col (col)}
                 <th class="border-b p-2 text-center font-medium">{col}</th>
               {/each}
             </tr>
           </thead>
           <tbody>
-            {#each table.rows as row (row.label)}
+            {#each content.rows as row (row.label)}
               <tr>
                 <td class="text-muted-foreground border-b p-2 whitespace-nowrap">{row.label}</td>
-                {#each row.values as value, i (table.columns[i])}
+                {#each row.values as value, i (content.columns[i])}
                   <td class="border-b p-2 text-center">{value}</td>
                 {/each}
               </tr>
             {/each}
           </tbody>
         </table>
+      </div>
+    {:else if content?.kind === "sections"}
+      <div class="flex max-h-96 flex-col gap-3 overflow-y-auto">
+        {#each content.sections as section (section.title)}
+          <div class="rounded-lg border p-3">
+            <p class="mb-2 text-sm font-medium">{section.title}</p>
+            <div class="flex flex-col gap-1">
+              {#each section.items as item (item.label)}
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-muted-foreground">{item.label}</span>
+                  <span class="font-medium">{item.value}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/each}
       </div>
     {:else}
       <p class="text-muted-foreground py-4 text-center text-sm">

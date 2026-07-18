@@ -134,7 +134,8 @@
 
   let totalBelanja = $derived(
     bets.reduce(
-      (sum, entry) => sum.plus(calculatePayout(entry.type, entry.bet, entry.kombinasi).payout),
+      (sum, entry) =>
+        sum.plus(calculatePayout(entry.type, entry.number, entry.bet, entry.kombinasi).payout),
       new Decimal(0),
     ),
   );
@@ -323,7 +324,7 @@
     <div class="mt-3 flex flex-col gap-2">
       {#each filteredBets as entry (entry.id)}
         {@const payoutInfo = BET_TYPE_LIMITS[entry.type]
-          ? calculatePayout(entry.type, entry.bet, entry.kombinasi)
+          ? calculatePayout(entry.type, entry.number, entry.bet, entry.kombinasi)
           : null}
         <div
           class="flex items-center justify-between rounded-lg border p-3"
@@ -344,7 +345,14 @@
                   : ""}
               </p>
               <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
-              {#if payoutInfo.disc}
+              {#if payoutInfo.kei !== null}
+                {#if payoutInfo.keiNegativeStyle}
+                  <p class="text-xs text-blue-600">Kei : ({formatIDR(payoutInfo.kei)})</p>
+                {:else}
+                  <p class="text-xs text-blue-600">Kei : {formatIDR(payoutInfo.kei)}</p>
+                {/if}
+              {/if}
+              {#if payoutInfo.disc !== null}
                 <p class="text-destructive text-xs">Disc : (-{formatIDR(payoutInfo.disc)})</p>
               {/if}
               <p class="text-xs text-blue-600">Payout : {formatIDR(payoutInfo.payout)}</p>
@@ -457,7 +465,7 @@
             <div class="flex max-h-72 flex-col gap-2 overflow-y-auto">
               {#each group.entries as entry (entry.id)}
                 {@const payoutInfo = BET_TYPE_LIMITS[entry.type]
-                  ? calculatePayout(entry.type, entry.bet, entry.kombinasi)
+                  ? calculatePayout(entry.type, entry.number, entry.bet, entry.kombinasi)
                   : null}
                 <div class="rounded-lg border p-3">
                   {#if entry.compactDisplay}
@@ -473,7 +481,14 @@
                         : ""}
                     </p>
                     <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
-                    {#if payoutInfo.disc}
+                    {#if payoutInfo.kei !== null}
+                      {#if payoutInfo.keiNegativeStyle}
+                        <p class="text-destructive text-xs">Kei : ({formatIDR(payoutInfo.kei)})</p>
+                      {:else}
+                        <p class="text-xs text-blue-600">Kei : {formatIDR(payoutInfo.kei)}</p>
+                      {/if}
+                    {/if}
+                    {#if payoutInfo.disc !== null}
                       <p class="text-destructive text-xs">Disc : (-{formatIDR(payoutInfo.disc)})</p>
                     {/if}
                     <p class="text-xs text-blue-600">Payout : {formatIDR(payoutInfo.payout)}</p>

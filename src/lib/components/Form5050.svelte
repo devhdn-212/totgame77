@@ -3,6 +3,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Select, SelectTrigger, SelectContent, SelectItem } from "$lib/components/ui/select";
   import Plus from "@lucide/svelte/icons/plus";
+  import { BET_TYPE_LIMITS, formatIDR } from "$lib/utils";
 
   type BetEntry = {
     id: string;
@@ -64,6 +65,11 @@
     if (Number(betInput) < MIN_BET) {
       minBetRequired = MIN_BET;
       minBetAlertOpen = true;
+      return;
+    }
+    const maxBet = BET_TYPE_LIMITS[TYPE_LABEL[type]]?.maxBet;
+    if (maxBet !== undefined && Number(betInput) > maxBet) {
+      formError = `Bet melebihi maksimal ${formatIDR(maxBet)}`;
       return;
     }
 
