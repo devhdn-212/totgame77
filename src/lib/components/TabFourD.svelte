@@ -19,7 +19,7 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Dices from "@lucide/svelte/icons/dices";
   import { untrack } from "svelte";
-  import { formatIDR } from "$lib/utils";
+  import { formatIDR, calculatePayout } from "$lib/utils";
   import Decimal from "decimal.js";
 
   type BetEntry = {
@@ -36,10 +36,12 @@
   let {
     bets = $bindable(),
     minBetAlertOpen = $bindable(false),
+    minBetRequired = $bindable(500),
     onCheckoutClick,
   }: {
     bets: BetEntry[];
     minBetAlertOpen: boolean;
+    minBetRequired: number;
     onCheckoutClick: () => void;
   } = $props();
 
@@ -53,7 +55,12 @@
   let bolakBalikGuardOpen = $state(false);
   let leaveBolakBalikGuardOpen = $state(false);
 
-  let totalBelanja = $derived(bets.reduce((sum, entry) => sum.plus(entry.bet), new Decimal(0)));
+  let totalBelanja = $derived(
+    bets.reduce(
+      (sum, entry) => sum.plus(calculatePayout(entry.type, entry.bet, entry.kombinasi).payout),
+      new Decimal(0),
+    ),
+  );
 
   $effect(() => {
     const enteringBolakBalik = activeSubTab === "BOLAK BALIK" && lastValidSubTab !== "BOLAK BALIK";
@@ -149,6 +156,7 @@
 
     for (const type of filled) {
       if (Number(setBetInputs[type]) < MIN_BET) {
+        minBetRequired = MIN_BET;
         minBetAlertOpen = true;
         return;
       }
@@ -263,7 +271,8 @@
       return;
     }
     if (Number(bbBetInput) < MIN_BET) {
-      minBetAlertOpen = true;
+      minBetRequired = MIN_BET;
+        minBetAlertOpen = true;
       return;
     }
 
@@ -340,6 +349,7 @@
       }
       const bet = betPart;
       if (Number(bet) < MIN_BET) {
+        minBetRequired = MIN_BET;
         minBetAlertOpen = true;
         return;
       }
@@ -396,7 +406,8 @@
       return;
     }
     if (Number(quickBetInput) < MIN_BET) {
-      minBetAlertOpen = true;
+      minBetRequired = MIN_BET;
+        minBetAlertOpen = true;
       return;
     }
 
@@ -440,7 +451,7 @@
   {#each fourDSubTabs as tab (tab)}
     <TabsContent value={tab} class="text-sm">
       {#if tab === "4D/3D/2D"}
-        <Form432 bind:bets bind:minBetAlertOpen />
+        <Form432 bind:bets bind:minBetAlertOpen bind:minBetRequired />
       {:else if tab === "4D/3D/2D SET"}
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">

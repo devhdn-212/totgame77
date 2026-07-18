@@ -3,21 +3,25 @@
 	import Receipt from "@lucide/svelte/icons/receipt";
 	import BookOpen from "@lucide/svelte/icons/book-open";
 	import Camera from "@lucide/svelte/icons/camera";
+	import Info from "@lucide/svelte/icons/info";
 
 	let {
 		active = $bindable("transaksi"),
 		onTransaksiClick,
+		onInformasiClick,
 		onCameraClick,
 		onBukuMimpiClick,
 	}: {
 		active?: string;
 		onTransaksiClick?: () => void;
+		onInformasiClick?: () => void;
 		onCameraClick?: () => void;
 		onBukuMimpiClick?: () => void;
 	} = $props();
 
 	const items = [
 		{ key: "transaksi", label: "Transaksi", href: "#/transaksi", icon: Receipt },
+		{ key: "informasi", label: "Informasi", href: "#/informasi", icon: Info },
 		{ key: "camera", label: "Camera", href: "#/camera", icon: Camera },
 		{ key: "bukumimpi", label: "Buku Mimpi", href: "#/bukumimpi", icon: BookOpen },
 	];
@@ -41,6 +45,9 @@
 					if (item.key === "transaksi") {
 						e.preventDefault();
 						onTransaksiClick?.();
+					} else if (item.key === "informasi") {
+						e.preventDefault();
+						onInformasiClick?.();
 					} else if (item.key === "camera") {
 						e.preventDefault();
 						onCameraClick?.();

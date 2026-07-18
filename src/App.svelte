@@ -9,6 +9,7 @@
   import TabShio from "$lib/components/TabShio.svelte";
   import CameraOcr from "$lib/components/CameraOcr.svelte";
   import BukuMimpi from "$lib/components/BukuMimpi.svelte";
+  import InformasiModal from "$lib/components/InformasiModal.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Card, CardContent } from "$lib/components/ui/card";
   import { Tabs, TabsList, TabsTrigger, TabsContent } from "$lib/components/ui/tabs";
@@ -30,7 +31,7 @@
     DialogTitle,
     DialogDescription,
   } from "$lib/components/ui/dialog";
-  import { formatIDR, cn } from "$lib/utils";
+  import { formatIDR, cn, BET_TYPE_LIMITS, calculatePayout } from "$lib/utils";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import Search from "@lucide/svelte/icons/search";
@@ -69,6 +70,7 @@
     bet: string;
     deletable?: boolean;
     kombinasi?: string;
+    compactDisplay?: boolean;
   };
 
   let bets = $state<BetEntry[]>([]);
@@ -76,12 +78,36 @@
 
   const MIN_BET = 500;
   let minBetAlertOpen = $state(false);
+  let minBetRequired = $state(MIN_BET);
 
   function handleDeleteBet(id: string) {
     bets = bets.filter((entry) => entry.id !== id);
   }
 
-  const BET_TYPE_LABELS = ["4D", "3D", "3DD", "2D", "2DD", "2DT"];
+  const BET_TYPE_LABELS = [
+    "4D",
+    "3D",
+    "3DD",
+    "2D",
+    "2DD",
+    "2DT",
+    "COLOK_BEBAS",
+    "COLOK_MACAU",
+    "COLOK_NAGA",
+    "COLOK_JITU",
+    "SHIO",
+    "DASAR",
+    "MACAU_KOMBINASI",
+    "50_50_UMUM",
+    "50_50_SPECIAL",
+    "50_50_KOMBINASI",
+  ];
+  const BET_TYPE_SHORT_LABEL: Record<string, string> = {
+    COLOK_BEBAS: "CBEBAS",
+    COLOK_MACAU: "CMACAU",
+    COLOK_NAGA: "CNAGA",
+    COLOK_JITU: "CJITU",
+  };
 
   let searchQuery = $state("");
   let activeTypeFilter = $state<string | null>(null);
@@ -97,8 +123,9 @@
   let betTypeCounts = $derived(
     BET_TYPE_LABELS.map((type) => ({
       type,
+      label: BET_TYPE_SHORT_LABEL[type] ?? type,
       count: searchFilteredBets.filter((entry) => entry.type === type).length,
-    })),
+    })).filter((t) => t.count > 0),
   );
 
   function handleTypeFilterClick(type: string) {
@@ -106,7 +133,10 @@
   }
 
   let totalBelanja = $derived(
-    bets.reduce((sum, entry) => sum.plus(entry.bet), new Decimal(0)),
+    bets.reduce(
+      (sum, entry) => sum.plus(calculatePayout(entry.type, entry.bet, entry.kombinasi).payout),
+      new Decimal(0),
+    ),
   );
 
   let checkoutOpen = $state(false);
@@ -134,6 +164,7 @@
   }
 
   let transaksiModalOpen = $state(false);
+  let informasiModalOpen = $state(false);
   let cameraOcrOpen = $state(false);
   let bukuMimpiOpen = $state(false);
 
@@ -206,17 +237,17 @@
   </div>
 
   {#if activeBetType === "4D/3D/2D"}
-    <TabFourD bind:bets bind:minBetAlertOpen onCheckoutClick={handleCheckoutClick} />
+    <TabFourD bind:bets bind:minBetAlertOpen bind:minBetRequired onCheckoutClick={handleCheckoutClick} />
   {:else if activeBetType === "Colok"}
-    <TabColok />
+    <TabColok bind:bets bind:minBetAlertOpen bind:minBetRequired />
   {:else if activeBetType === "5050"}
-    <Tab5050 />
+    <Tab5050 bind:bets bind:minBetAlertOpen bind:minBetRequired />
   {:else if activeBetType === "Macau/Kombinasi"}
-    <TabMacauKombinasi />
+    <TabMacauKombinasi bind:bets bind:minBetAlertOpen bind:minBetRequired />
   {:else if activeBetType === "Dasar"}
-    <TabDasar />
+    <TabDasar bind:bets bind:minBetAlertOpen bind:minBetRequired />
   {:else if activeBetType === "Shio"}
-    <TabShio />
+    <TabShio bind:bets bind:minBetAlertOpen bind:minBetRequired />
   {/if}
 
   {#if bets.length > 0}
@@ -259,7 +290,7 @@
     </div>
 
     <div class="mt-2 -mx-4 flex scrollbar-none items-center gap-2 overflow-x-auto px-4 pb-1">
-      {#each betTypeCounts as { type, count } (type)}
+      {#each betTypeCounts as { type, label, count } (type)}
         <button
           type="button"
           class={cn(
@@ -270,7 +301,7 @@
           )}
           onclick={() => handleTypeFilterClick(type)}
         >
-          {type} :
+          {label} :
           {#key count}
             <span class="inline-block" in:scale={{ duration: 250, start: 0.4 }}>{count}</span>
           {/key}
@@ -291,18 +322,40 @@
 
     <div class="mt-3 flex flex-col gap-2">
       {#each filteredBets as entry (entry.id)}
+        {@const payoutInfo = BET_TYPE_LIMITS[entry.type]
+          ? calculatePayout(entry.type, entry.bet, entry.kombinasi)
+          : null}
         <div
           class="flex items-center justify-between rounded-lg border p-3"
           out:slide={{ duration: 200 }}
           animate:flip={{ duration: 200 }}
         >
           <div>
-            <p class="text-sm font-medium">
-              {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
-                ? ` - ${entry.kombinasi}`
-                : ""}
-            </p>
-            <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+            {#if entry.compactDisplay}
+              <p class="text-sm font-medium">
+                {entry.type} - {entry.number} - {entry.bet}{entry.kombinasi
+                  ? ` - ${entry.kombinasi}`
+                  : ""}
+              </p>
+            {:else if payoutInfo}
+              <p class="text-sm font-medium">
+                {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
+                  ? ` - ${entry.kombinasi}`
+                  : ""}
+              </p>
+              <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+              {#if payoutInfo.disc}
+                <p class="text-destructive text-xs">Disc : (-{formatIDR(payoutInfo.disc)})</p>
+              {/if}
+              <p class="text-xs text-blue-600">Payout : {formatIDR(payoutInfo.payout)}</p>
+            {:else}
+              <p class="text-sm font-medium">
+                {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
+                  ? ` - ${entry.kombinasi}`
+                  : ""}
+              </p>
+              <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+            {/if}
           </div>
           {#if entry.deletable !== false}
             <Button
@@ -351,7 +404,7 @@
   <AlertDialogContent>
     <AlertDialogHeader>
       <AlertDialogTitle>Bet Tidak Valid</AlertDialogTitle>
-      <AlertDialogDescription>Minimal bet {formatIDR(MIN_BET)}</AlertDialogDescription>
+      <AlertDialogDescription>Minimal bet {formatIDR(minBetRequired)}</AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogAction class="cursor-pointer" onclick={() => (minBetAlertOpen = false)}>
@@ -403,13 +456,35 @@
           <TabsContent value={group.type}>
             <div class="flex max-h-72 flex-col gap-2 overflow-y-auto">
               {#each group.entries as entry (entry.id)}
+                {@const payoutInfo = BET_TYPE_LIMITS[entry.type]
+                  ? calculatePayout(entry.type, entry.bet, entry.kombinasi)
+                  : null}
                 <div class="rounded-lg border p-3">
-                  <p class="text-sm font-medium">
-                    {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
-                      ? ` - ${entry.kombinasi}`
-                      : ""}
-                  </p>
-                  <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+                  {#if entry.compactDisplay}
+                    <p class="text-sm font-medium">
+                      {entry.type} - {entry.number} - {entry.bet}{entry.kombinasi
+                        ? ` - ${entry.kombinasi}`
+                        : ""}
+                    </p>
+                  {:else if payoutInfo}
+                    <p class="text-sm font-medium">
+                      {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
+                        ? ` - ${entry.kombinasi}`
+                        : ""}
+                    </p>
+                    <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+                    {#if payoutInfo.disc}
+                      <p class="text-destructive text-xs">Disc : (-{formatIDR(payoutInfo.disc)})</p>
+                    {/if}
+                    <p class="text-xs text-blue-600">Payout : {formatIDR(payoutInfo.payout)}</p>
+                  {:else}
+                    <p class="text-sm font-medium">
+                      {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
+                        ? ` - ${entry.kombinasi}`
+                        : ""}
+                    </p>
+                    <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
+                  {/if}
                 </div>
               {/each}
             </div>
@@ -420,11 +495,13 @@
   </DialogContent>
 </Dialog>
 
-<CameraOcr bind:open={cameraOcrOpen} bind:bets bind:minBetAlertOpen />
+<CameraOcr bind:open={cameraOcrOpen} bind:bets bind:minBetAlertOpen bind:minBetRequired />
 <BukuMimpi bind:open={bukuMimpiOpen} />
+<InformasiModal bind:open={informasiModalOpen} {activeBetType} />
 
 <BottomNav
   onTransaksiClick={() => (transaksiModalOpen = true)}
+  onInformasiClick={() => (informasiModalOpen = true)}
   onCameraClick={() => (cameraOcrOpen = true)}
   onBukuMimpiClick={() => (bukuMimpiOpen = true)}
 />

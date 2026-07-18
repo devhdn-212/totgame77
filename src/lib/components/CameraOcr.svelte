@@ -27,10 +27,12 @@
     open = $bindable(false),
     bets = $bindable(),
     minBetAlertOpen = $bindable(false),
+    minBetRequired = $bindable(500),
   }: {
     open: boolean;
     bets: BetEntry[];
     minBetAlertOpen: boolean;
+    minBetRequired: number;
   } = $props();
 
   const MIN_BET = 500;
@@ -131,6 +133,7 @@
   function handleConfirmAdd() {
     const invalidBet = parsedRows.find((row) => Number(row.bet) < MIN_BET);
     if (invalidBet) {
+      minBetRequired = MIN_BET;
       minBetAlertOpen = true;
       return;
     }

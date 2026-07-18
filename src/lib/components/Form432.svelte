@@ -13,6 +13,7 @@
   import Dices from "@lucide/svelte/icons/dices";
   import Info from "@lucide/svelte/icons/info";
   import { z } from "zod";
+  import { BET_TYPE_LIMITS, formatIDR } from "$lib/utils";
 
   type BetEntry = {
     id: string;
@@ -26,9 +27,11 @@
   let {
     bets = $bindable(),
     minBetAlertOpen = $bindable(false),
+    minBetRequired = $bindable(500),
   }: {
     bets: BetEntry[];
     minBetAlertOpen: boolean;
+    minBetRequired: number;
   } = $props();
 
   const MIN_BET = 500;
@@ -94,11 +97,18 @@
       return;
     }
     if (Number(result.data.bet) < MIN_BET) {
+      minBetRequired = MIN_BET;
       minBetAlertOpen = true;
       return;
     }
-    formError = "";
     const type = classifyBetType(result.data.number);
+    const maxBet = BET_TYPE_LIMITS[type]?.maxBet;
+    if (maxBet !== undefined && Number(result.data.bet) > maxBet) {
+      formError = `Bet melebihi maksimal ${formatIDR(maxBet)} untuk ${type}`;
+      return;
+    }
+
+    formError = "";
     const newEntries = Array.from({ length: Number(result.data.qty) }, () => ({
       id: crypto.randomUUID(),
       type,
