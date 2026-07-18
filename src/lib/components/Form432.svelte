@@ -1,8 +1,17 @@
 <script lang="ts">
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
+  import { Select, SelectTrigger, SelectContent, SelectItem } from "$lib/components/ui/select";
+  import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+  } from "$lib/components/ui/dialog";
   import Plus from "@lucide/svelte/icons/plus";
   import Dices from "@lucide/svelte/icons/dices";
+  import Info from "@lucide/svelte/icons/info";
   import { z } from "zod";
 
   type BetEntry = {
@@ -11,6 +20,7 @@
     number: string;
     bet: string;
     deletable?: boolean;
+    kombinasi?: string;
   };
 
   let {
@@ -23,10 +33,15 @@
 
   const MIN_BET = 500;
 
+  const KOMBINASI_OPTIONS = ["DISC", "FULL", "BB"];
+  const QTY_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
+
   let numberInput = $state("");
   let betInput = $state("500");
   let qtyInput = $state("1");
+  let kombinasiInput = $state("DISC");
   let formError = $state("");
+  let infoOpen = $state(false);
 
   function handleNumberInput(e: Event) {
     const target = e.currentTarget as HTMLInputElement;
@@ -51,14 +66,6 @@
     const target = e.currentTarget as HTMLInputElement;
     const digitsOnly = target.value.replace(/\D/g, "");
     betInput = digitsOnly;
-    target.value = digitsOnly;
-    formError = "";
-  }
-
-  function handleQtyInput(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    const digitsOnly = target.value.replace(/\D/g, "").slice(0, 2);
-    qtyInput = digitsOnly;
     target.value = digitsOnly;
     formError = "";
   }
@@ -97,6 +104,7 @@
       type,
       number: result.data.number,
       bet: result.data.bet,
+      kombinasi: kombinasiInput,
     }));
     bets = [...newEntries, ...bets];
     numberInput = "";
@@ -126,16 +134,16 @@
     >
       <Dices />
     </Button>
-    <Input
-      type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      maxlength={2}
-      placeholder="Qty"
-      class="w-14 shrink-0 text-center"
-      value={qtyInput}
-      oninput={handleQtyInput}
-    />
+    <Select type="single" bind:value={qtyInput}>
+      <SelectTrigger class="w-16 shrink-0">
+        {qtyInput}
+      </SelectTrigger>
+      <SelectContent>
+        {#each QTY_OPTIONS as option (option)}
+          <SelectItem value={option}>{option}</SelectItem>
+        {/each}
+      </SelectContent>
+    </Select>
     <Input
       type="text"
       inputmode="numeric"
@@ -146,14 +154,50 @@
       oninput={handleBetInput}
     />
   </div>
-  <Button
-    class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
-    onclick={handleAddBet}
-  >
-    <Plus />
-    Tambah
-  </Button>
+  <Select type="single" bind:value={kombinasiInput}>
+    <SelectTrigger class="w-full">
+      {kombinasiInput}
+    </SelectTrigger>
+    <SelectContent>
+      {#each KOMBINASI_OPTIONS as option (option)}
+        <SelectItem value={option}>{option}</SelectItem>
+      {/each}
+    </SelectContent>
+  </Select>
+  <div class="flex items-center gap-2">
+    <Button
+      class="flex-1 cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
+      onclick={handleAddBet}
+    >
+      <Plus />
+      Tambah
+    </Button>
+    <Button
+      size="icon"
+      variant="outline"
+      class="shrink-0 cursor-pointer"
+      aria-label="Informasi"
+      onclick={() => (infoOpen = true)}
+    >
+      <Info />
+    </Button>
+  </div>
 </div>
 {#if formError}
   <p class="text-destructive mt-1 text-xs">{formError}</p>
 {/if}
+
+<Dialog bind:open={infoOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Informasi</DialogTitle>
+      <DialogDescription>Cara penulisan nomor</DialogDescription>
+    </DialogHeader>
+    <pre class="rounded-lg border bg-muted/50 p-3 font-mono text-sm leading-relaxed">4D  : 1234
+3D  : 234
+3DD : 234*
+2D  : 34
+2DD : 23**
+2DT : *23*</pre>
+  </DialogContent>
+</Dialog>

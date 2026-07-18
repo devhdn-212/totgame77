@@ -14,21 +14,22 @@
 
   let { open = $bindable(false) }: { open: boolean } = $props();
 
-  const TIPE_OPTIONS = ["ALL", "4D", "3D", "3DD", "2D", "2DD", "2DT"];
+  const TIPE_OPTIONS = ["ALL", "4D", "3D", "2D"];
 
   type BukuMimpiRow = { id: string; type: string; name: string; nomor: string };
 
   let tipe = $state("ALL");
   let namaQuery = $state("");
-  let localSearch = $state("");
   let results = $state<BukuMimpiRow[]>([]);
   let loading = $state(false);
   let errorMessage = $state("");
 
+  // The same text input both filters what's already loaded (instant, as you
+  // type) and becomes the "nama" sent to the server when Search is clicked.
   let filteredResults = $derived(
     results.filter((row) => {
-      if (!localSearch) return true;
-      const q = localSearch.toLowerCase();
+      if (!namaQuery) return true;
+      const q = namaQuery.toLowerCase();
       return row.name.toLowerCase().includes(q) || row.nomor.toLowerCase().includes(q);
     }),
   );
@@ -73,7 +74,6 @@
     if (open) {
       tipe = "ALL";
       namaQuery = "";
-      localSearch = "";
       fetchData("", "");
     }
   });
@@ -113,17 +113,6 @@
           <Search />
           Search
         </Button>
-        <div class="relative">
-          <Search
-            class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
-          />
-          <Input
-            type="text"
-            placeholder="Cari di hasil yang sudah dimuat"
-            class="pl-8"
-            bind:value={localSearch}
-          />
-        </div>
       </div>
 
       {#if loading}

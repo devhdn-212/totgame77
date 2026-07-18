@@ -19,6 +19,8 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Dices from "@lucide/svelte/icons/dices";
   import { untrack } from "svelte";
+  import { formatIDR } from "$lib/utils";
+  import Decimal from "decimal.js";
 
   type BetEntry = {
     id: string;
@@ -26,7 +28,10 @@
     number: string;
     bet: string;
     deletable?: boolean;
+    kombinasi?: string;
   };
+
+  const KOMBINASI_OPTIONS = ["DISC", "FULL", "BB"];
 
   let {
     bets = $bindable(),
@@ -46,11 +51,20 @@
   let activeSubTab = $state(fourDSubTabs[0]);
   let lastValidSubTab = fourDSubTabs[0];
   let bolakBalikGuardOpen = $state(false);
+  let leaveBolakBalikGuardOpen = $state(false);
+
+  let totalBelanja = $derived(bets.reduce((sum, entry) => sum.plus(entry.bet), new Decimal(0)));
 
   $effect(() => {
-    if (activeSubTab === "BOLAK BALIK" && untrack(() => bets.length > 0)) {
+    const enteringBolakBalik = activeSubTab === "BOLAK BALIK" && lastValidSubTab !== "BOLAK BALIK";
+    const leavingBolakBalik = activeSubTab !== "BOLAK BALIK" && lastValidSubTab === "BOLAK BALIK";
+
+    if (enteringBolakBalik && untrack(() => bets.length > 0)) {
       activeSubTab = lastValidSubTab;
       bolakBalikGuardOpen = true;
+    } else if (leavingBolakBalik && untrack(() => bets.length > 0)) {
+      activeSubTab = "BOLAK BALIK";
+      leaveBolakBalikGuardOpen = true;
     } else {
       lastValidSubTab = activeSubTab;
     }
@@ -65,10 +79,21 @@
     bolakBalikGuardOpen = false;
   }
 
+  function handleLeaveGuardCheckout() {
+    leaveBolakBalikGuardOpen = false;
+    onCheckoutClick();
+  }
+
+  function handleLeaveGuardCancel() {
+    bets = [];
+    leaveBolakBalikGuardOpen = false;
+  }
+
   let setNumberInput = $state("");
   let setBetInputs = $state<Record<string, string>>(
     Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""])),
   );
+  let setKombinasiInput = $state("DISC");
   let setFormError = $state("");
 
   function handleSetNumberInput(e: Event) {
@@ -135,6 +160,7 @@
       type,
       number: deriveSetNumber(type, setNumberInput),
       bet: setBetInputs[type],
+      kombinasi: setKombinasiInput,
     }));
     bets = [...newEntries, ...bets];
 
@@ -147,6 +173,7 @@
   let bbFormError = $state("");
   let bbWarning = $state("");
   let bbKembarMode = $state("tidak-kembar");
+  let bbKombinasiInput = $state("DISC");
 
   function handleBbNumberInput(e: Event) {
     const target = e.currentTarget as HTMLInputElement;
@@ -261,6 +288,7 @@
       number: result.nomor,
       bet: bbBetInput,
       deletable: false,
+      kombinasi: bbKombinasiInput,
     }));
     bets = [...newEntries, ...bets];
 
@@ -269,6 +297,7 @@
   }
 
   let wapInput = $state("");
+  let wapKombinasiInput = $state("DISC");
   let wapFormError = $state("");
 
   function handleWapInput(e: Event) {
@@ -337,6 +366,7 @@
       type: entry.type,
       number: entry.number,
       bet: entry.bet,
+      kombinasi: wapKombinasiInput,
     }));
     bets = [...newEntries, ...bets];
 
@@ -348,6 +378,7 @@
 
   let quickKondisi = $state("BESAR");
   let quickPasaran = $state("2D");
+  let quickKombinasiInput = $state("DISC");
   let quickBetInput = $state("500");
   let quickFormError = $state("");
 
@@ -385,6 +416,7 @@
       type: quickPasaran,
       number,
       bet: quickBetInput,
+      kombinasi: quickKombinasiInput,
     }));
     bets = [...newEntries, ...bets];
 
@@ -396,7 +428,12 @@
   <div class="-mx-4 scrollbar-none overflow-x-auto px-4">
     <TabsList class="w-max">
       {#each fourDSubTabs as tab (tab)}
-        <TabsTrigger value={tab} class="cursor-pointer whitespace-nowrap">{tab}</TabsTrigger>
+        <TabsTrigger
+          value={tab}
+          class="cursor-pointer whitespace-nowrap data-active:border-orange-300! data-active:bg-orange-100! data-active:text-orange-700!"
+        >
+          {tab}
+        </TabsTrigger>
       {/each}
     </TabsList>
   </div>
@@ -443,6 +480,16 @@
               </div>
             {/each}
           </div>
+          <Select type="single" bind:value={setKombinasiInput}>
+            <SelectTrigger class="w-full">
+              {setKombinasiInput}
+            </SelectTrigger>
+            <SelectContent>
+              {#each KOMBINASI_OPTIONS as option (option)}
+                <SelectItem value={option}>{option}</SelectItem>
+              {/each}
+            </SelectContent>
+          </Select>
           <Button
             class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
             onclick={handleAddSetBet}
@@ -496,6 +543,16 @@
               Kembar
             </label>
           </RadioGroup>
+          <Select type="single" bind:value={bbKombinasiInput}>
+            <SelectTrigger class="w-full">
+              {bbKombinasiInput}
+            </SelectTrigger>
+            <SelectContent>
+              {#each KOMBINASI_OPTIONS as option (option)}
+                <SelectItem value={option}>{option}</SelectItem>
+              {/each}
+            </SelectContent>
+          </Select>
           <Button
             class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
             onclick={handleAddBolakBalik}
@@ -518,6 +575,16 @@
             value={wapInput}
             oninput={handleWapInput}
           />
+          <Select type="single" bind:value={wapKombinasiInput}>
+            <SelectTrigger class="w-full">
+              {wapKombinasiInput}
+            </SelectTrigger>
+            <SelectContent>
+              {#each KOMBINASI_OPTIONS as option (option)}
+                <SelectItem value={option}>{option}</SelectItem>
+              {/each}
+            </SelectContent>
+          </Select>
           <Button
             class="w-full cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
             onclick={handleAddWap}
@@ -548,6 +615,16 @@
               </SelectTrigger>
               <SelectContent>
                 {#each QUICK_PASARAN_OPTIONS as option (option)}
+                  <SelectItem value={option}>{option}</SelectItem>
+                {/each}
+              </SelectContent>
+            </Select>
+            <Select type="single" bind:value={quickKombinasiInput}>
+              <SelectTrigger class="w-full">
+                {quickKombinasiInput}
+              </SelectTrigger>
+              <SelectContent>
+                {#each KOMBINASI_OPTIONS as option (option)}
                   <SelectItem value={option}>{option}</SelectItem>
                 {/each}
               </SelectContent>
@@ -593,6 +670,32 @@
         Batalkan
       </AlertDialogCancel>
       <AlertDialogAction class="cursor-pointer" onclick={handleGuardCheckout}>
+        Checkout
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
+<AlertDialog bind:open={leaveBolakBalikGuardOpen}>
+  <AlertDialogContent onCloseAutoFocus={(e: Event) => e.preventDefault()}>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Harap melakukan pembelian</AlertDialogTitle>
+      <AlertDialogDescription>
+        Total Belanja: {formatIDR(totalBelanja)}
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel class="cursor-pointer" onclick={handleLeaveGuardCancel}>
+        Dibatalkan
+      </AlertDialogCancel>
+      <Button
+        variant="outline"
+        class="cursor-pointer"
+        onclick={() => (leaveBolakBalikGuardOpen = false)}
+      >
+        Lanjut Belanja
+      </Button>
+      <AlertDialogAction class="cursor-pointer" onclick={handleLeaveGuardCheckout}>
         Checkout
       </AlertDialogAction>
     </AlertDialogFooter>

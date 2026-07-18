@@ -24,15 +24,16 @@
 </script>
 
 <nav
-	class="bg-background fixed inset-x-0 bottom-0 z-50 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
+	class="fixed inset-x-4 z-50 mx-auto max-w-md rounded-3xl border border-white/40 bg-white/70 shadow-lg shadow-black/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
+	style="bottom: calc(1rem + env(safe-area-inset-bottom));"
 >
-	<div class="mx-auto flex max-w-6xl">
+	<div class="flex">
 		{#each items as item (item.key)}
 			{@const Icon = item.icon}
 			<a
 				href={item.href}
 				class={cn(
-					"flex flex-1 flex-col items-center gap-1 py-2 text-xs",
+					"flex flex-1 flex-col items-center gap-1 py-3 text-xs transition-colors",
 					active === item.key ? "text-primary" : "text-muted-foreground",
 				)}
 				onclick={(e) => {

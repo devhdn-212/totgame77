@@ -35,11 +35,19 @@
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import Search from "@lucide/svelte/icons/search";
   import X from "@lucide/svelte/icons/x";
+  import Sun from "@lucide/svelte/icons/sun";
+  import Moon from "@lucide/svelte/icons/moon";
   import Decimal from "decimal.js";
   import { scale, slide } from "svelte/transition";
   import { flip } from "svelte/animate";
   import { Tween } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
+
+  let isDark = $state(false);
+
+  $effect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  });
 
   const username = "ls0999212";
   const periode = "6512";
@@ -60,6 +68,7 @@
     number: string;
     bet: string;
     deletable?: boolean;
+    kombinasi?: string;
   };
 
   let bets = $state<BetEntry[]>([]);
@@ -137,7 +146,33 @@
   );
 </script>
 
-<main class="mx-auto max-w-6xl px-4 py-6 pb-20 md:pb-6">
+<main class="mx-auto max-w-6xl px-4 py-6 pb-20">
+  <div class="mb-3 flex justify-end">
+    <div class="bg-muted flex w-fit gap-1 rounded-full border p-1">
+      <button
+        type="button"
+        class={cn(
+          "flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+          !isDark ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+        )}
+        onclick={() => (isDark = false)}
+      >
+        <Sun class="size-3.5" />
+        Terang
+      </button>
+      <button
+        type="button"
+        class={cn(
+          "flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+          isDark ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+        )}
+        onclick={() => (isDark = true)}
+      >
+        <Moon class="size-3.5" />
+        Gelap
+      </button>
+    </div>
+  </div>
   <Card>
     <CardContent class="flex items-start justify-between gap-4">
       <div>
@@ -147,7 +182,7 @@
       <div class="text-right">
         <p class="text-sm font-medium">{username}</p>
         <p class="text-muted-foreground text-xs">Credit</p>
-        <p class="text-lg font-semibold text-blue-600">
+        <p class="text-sm font-semibold text-blue-600">
           {formatIDR(creditDisplay.current)}
         </p>
       </div>
@@ -160,7 +195,8 @@
         variant="outline"
         class={cn(
           "shrink-0 cursor-pointer rounded-full",
-          activeBetType === type && "border-orange-300 bg-orange-100 text-orange-700 hover:bg-orange-200",
+          activeBetType === type &&
+            "border-orange-300! bg-orange-100! text-orange-700! hover:bg-orange-200!",
         )}
         onclick={() => handleBetTypeClick(type)}
       >
@@ -261,7 +297,11 @@
           animate:flip={{ duration: 200 }}
         >
           <div>
-            <p class="text-sm font-medium">{entry.type} - {entry.number.replace(/\*/g, "")}</p>
+            <p class="text-sm font-medium">
+              {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
+                ? ` - ${entry.kombinasi}`
+                : ""}
+            </p>
             <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
           </div>
           {#if entry.deletable !== false}
@@ -365,7 +405,9 @@
               {#each group.entries as entry (entry.id)}
                 <div class="rounded-lg border p-3">
                   <p class="text-sm font-medium">
-                    {entry.type} - {entry.number.replace(/\*/g, "")}
+                    {entry.type} - {entry.number.replace(/\*/g, "")}{entry.kombinasi
+                      ? ` - ${entry.kombinasi}`
+                      : ""}
                   </p>
                   <p class="text-xs text-blue-600">Bet : {formatIDR(entry.bet)}</p>
                 </div>
