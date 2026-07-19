@@ -31,6 +31,22 @@
         { label: "Hadiah BB", values: ["200X", "110X", "100X", "20X", "15X", "15X"] },
         { label: "Diskon", values: ["66%", "59%", "56%", "29%", "26%", "26%"] },
         {
+          label: "Minimal Bet",
+          values: [500, 500, 500, 500, 500, 500].map((v) => formatIDR(v)),
+        },
+        {
+          label: "Maksimal Bet Disc",
+          values: [50000, 200000, 200000, 1000000, 1000000, 1000000].map((v) => formatIDR(v)),
+        },
+        {
+          label: "Maksimal Bet Full",
+          values: [50000, 200000, 200000, 1000000, 1000000, 1000000].map((v) => formatIDR(v)),
+        },
+        {
+          label: "Maksimal Bet BB",
+          values: [50000, 200000, 200000, 1000000, 1000000, 1000000].map((v) => formatIDR(v)),
+        },
+        {
           label: "Limit Total",
           values: [50000, 200000, 200000, 1000000, 1000000, 1000000].map((v) => formatIDR(v)),
         },
