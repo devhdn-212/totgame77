@@ -64,6 +64,10 @@
           items: [
             { label: "Hadiah", value: "1.53x" },
             { label: "Disc", value: "6%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(3000000) },
+            { label: "Limit Total", value: formatIDR(3000000) },
+            { label: "Limit Global", value: formatIDR(3000000) },
           ],
         },
         {
@@ -73,6 +77,10 @@
             { label: "Hadiah 3 Digit", value: "11x" },
             { label: "Hadiah 4 Digit", value: "18x" },
             { label: "Disc", value: "10%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(3000000) },
+            { label: "Limit Total", value: formatIDR(3000000) },
+            { label: "Limit Global", value: formatIDR(3000000) },
           ],
         },
         {
@@ -81,6 +89,10 @@
             { label: "Hadiah 3 Digit", value: "25x" },
             { label: "Hadiah 4 Digit", value: "37x" },
             { label: "Disc", value: "10%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(3000000) },
+            { label: "Limit Total", value: formatIDR(3000000) },
+            { label: "Limit Global", value: formatIDR(3000000) },
           ],
         },
         {
@@ -91,6 +103,10 @@
             { label: "Hadiah Kepala", value: "8x" },
             { label: "Hadiah Ekor", value: "8x" },
             { label: "Disc", value: "5%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(3000000) },
+            { label: "Limit Total", value: formatIDR(3000000) },
+            { label: "Limit Global", value: formatIDR(3000000) },
           ],
         },
       ],
@@ -169,14 +185,24 @@
     },
   };
 
+  const INFO_DESCRIPTION: Record<string, string> = {
+    "4D/3D/2D":
+      "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan 4D/3D/2D",
+    Colok:
+      "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan Colok",
+  };
+
   let content = $derived(INFO_CONTENT[activeBetType] ?? null);
+  let description = $derived(
+    INFO_DESCRIPTION[activeBetType] ?? `Tabel hadiah dan diskon untuk permainan ${activeBetType}`,
+  );
 </script>
 
 <Dialog bind:open>
   <DialogContent class="max-w-lg">
     <DialogHeader>
       <DialogTitle>Informasi</DialogTitle>
-      <DialogDescription>Tabel hadiah dan diskon untuk permainan {activeBetType}</DialogDescription>
+      <DialogDescription>{description}</DialogDescription>
     </DialogHeader>
 
     {#if content?.kind === "table"}

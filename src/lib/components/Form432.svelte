@@ -105,12 +105,16 @@
     const maxBet = BET_TYPE_LIMITS[type]?.maxBet;
     const totalBet = Number(result.data.bet) * Number(result.data.qty);
     if (maxBet !== undefined) {
+      if (totalBet > maxBet) {
+        formError = `Bet melebihi maximal Bet dan maximal bet ${formatIDR(maxBet)} untuk ${type}`;
+        return;
+      }
       const existingTotal = bets
         .filter((entry) => entry.type === type && entry.number === result.data.number)
         .reduce((sum, entry) => sum + Number(entry.bet), 0);
       if (existingTotal + totalBet > maxBet) {
         const remaining = Math.max(maxBet - existingTotal, 0);
-        formError = `Bet melebihi maksimal ${formatIDR(maxBet)} untuk ${type} pada nomor ini (sisa ${formatIDR(remaining)})`;
+        formError = `Bet melebihi limit total ${formatIDR(maxBet)} untuk ${type} pada nomor ini (sisa ${formatIDR(remaining)})`;
         return;
       }
     }

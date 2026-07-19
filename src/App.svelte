@@ -412,7 +412,9 @@
   <AlertDialogContent>
     <AlertDialogHeader>
       <AlertDialogTitle>Bet Tidak Valid</AlertDialogTitle>
-      <AlertDialogDescription>Minimal bet {formatIDR(minBetRequired)}</AlertDialogDescription>
+      <AlertDialogDescription>
+        Bet tidak boleh dibawah minimal Bet dan minimal bet {formatIDR(minBetRequired)}
+      </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogAction class="cursor-pointer" onclick={() => (minBetAlertOpen = false)}>

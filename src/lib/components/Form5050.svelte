@@ -67,13 +67,7 @@
       minBetAlertOpen = true;
       return;
     }
-    const maxBet = BET_TYPE_LIMITS[TYPE_LABEL[type]]?.maxBet;
-    if (maxBet !== undefined && Number(betInput) > maxBet) {
-      formError = `Bet melebihi maksimal ${formatIDR(maxBet)}`;
-      return;
-    }
-
-    formError = "";
+    const betType = TYPE_LABEL[type];
     const number =
       type === "Special"
         ? `${specialPosisiInput}_${specialKondisiInput}`
@@ -81,6 +75,23 @@
           ? `${kombinasiPosisiInput}_${kombinasiJenisInput}`
           : umumInput;
 
+    const maxBet = BET_TYPE_LIMITS[betType]?.maxBet;
+    if (maxBet !== undefined) {
+      if (Number(betInput) > maxBet) {
+        formError = `Bet melebihi maximal Bet dan maximal bet ${formatIDR(maxBet)}`;
+        return;
+      }
+      const existingTotal = bets
+        .filter((entry) => entry.type === betType && entry.number === number)
+        .reduce((sum, entry) => sum + Number(entry.bet), 0);
+      if (existingTotal + Number(betInput) > maxBet) {
+        const remaining = Math.max(maxBet - existingTotal, 0);
+        formError = `Bet melebihi limit total ${formatIDR(maxBet)} untuk nomor ini (sisa ${formatIDR(remaining)})`;
+        return;
+      }
+    }
+
+    formError = "";
     const newEntry: BetEntry = {
       id: crypto.randomUUID(),
       type: TYPE_LABEL[type],

@@ -143,13 +143,21 @@
     }
   }
 
-  function isWithinTypeLimit(type: string, number: string, bet: number): boolean {
+  type LimitCheckResult =
+    | { ok: true }
+    | { ok: false; reason: "max" | "total"; maxBet: number; remaining: number };
+
+  function checkTypeLimit(type: string, number: string, bet: number): LimitCheckResult {
     const maxBet = BET_TYPE_LIMITS[type]?.maxBet;
-    if (maxBet === undefined) return true;
+    if (maxBet === undefined) return { ok: true };
+    if (bet > maxBet) return { ok: false, reason: "max", maxBet, remaining: 0 };
     const existingTotal = bets
       .filter((entry) => entry.type === type && entry.number === number)
       .reduce((sum, entry) => sum + Number(entry.bet), 0);
-    return existingTotal + bet <= maxBet;
+    if (existingTotal + bet > maxBet) {
+      return { ok: false, reason: "total", maxBet, remaining: Math.max(maxBet - existingTotal, 0) };
+    }
+    return { ok: true };
   }
 
   function handleAddSetBet() {
@@ -172,12 +180,14 @@
       }
     }
 
-    const rejected: string[] = [];
+    const rejectedMax: string[] = [];
+    const rejectedTotal: string[] = [];
     const newEntries = filled.flatMap((type) => {
       const number = deriveSetNumber(type, setNumberInput);
       const bet = Number(setBetInputs[type]);
-      if (!isWithinTypeLimit(type, number, bet)) {
-        rejected.push(type);
+      const result = checkTypeLimit(type, number, bet);
+      if (!result.ok) {
+        (result.reason === "max" ? rejectedMax : rejectedTotal).push(type);
         return [];
       }
       return [
@@ -192,10 +202,14 @@
     });
     bets = [...newEntries, ...bets];
 
-    setFormError =
-      rejected.length > 0
-        ? `Bet ${rejected.join(", ")} melebihi limit total dan tidak ditambahkan`
-        : "";
+    const messages: string[] = [];
+    if (rejectedMax.length > 0) {
+      messages.push(`Bet ${rejectedMax.join(", ")} melebihi maximal bet dan tidak ditambahkan`);
+    }
+    if (rejectedTotal.length > 0) {
+      messages.push(`Bet ${rejectedTotal.join(", ")} melebihi limit total dan tidak ditambahkan`);
+    }
+    setFormError = messages.join(" | ");
 
     setNumberInput = "";
     setBetInputs = Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""]));
@@ -315,10 +329,13 @@
         ? `Pasaran ${emptyLabels.join(", ")} kosong karena digit unik kurang (unik: ${uniqueDigitCount})`
         : "";
 
-    const rejectedCounts: Record<string, number> = {};
+    const rejectedMaxCounts: Record<string, number> = {};
+    const rejectedTotalCounts: Record<string, number> = {};
     const newEntries = results.flatMap((result) => {
-      if (!isWithinTypeLimit(result.pasaran, result.nomor, Number(bbBetInput))) {
-        rejectedCounts[result.pasaran] = (rejectedCounts[result.pasaran] ?? 0) + 1;
+      const check = checkTypeLimit(result.pasaran, result.nomor, Number(bbBetInput));
+      if (!check.ok) {
+        const counts = check.reason === "max" ? rejectedMaxCounts : rejectedTotalCounts;
+        counts[result.pasaran] = (counts[result.pasaran] ?? 0) + 1;
         return [];
       }
       return [
@@ -334,13 +351,18 @@
     });
     bets = [...newEntries, ...bets];
 
-    const rejectedLabels = Object.entries(rejectedCounts).map(
-      ([type, count]) => `${type} (${count} nomor)`,
-    );
-    bbFormError =
-      rejectedLabels.length > 0
-        ? `Melebihi limit total, tidak ditambahkan: ${rejectedLabels.join(", ")}`
-        : "";
+    const formatCounts = (counts: Record<string, number>) =>
+      Object.entries(counts)
+        .map(([type, count]) => `${type} (${count} nomor)`)
+        .join(", ");
+    const bbMessages: string[] = [];
+    if (Object.keys(rejectedMaxCounts).length > 0) {
+      bbMessages.push(`Melebihi maximal bet, tidak ditambahkan: ${formatCounts(rejectedMaxCounts)}`);
+    }
+    if (Object.keys(rejectedTotalCounts).length > 0) {
+      bbMessages.push(`Melebihi limit total, tidak ditambahkan: ${formatCounts(rejectedTotalCounts)}`);
+    }
+    bbFormError = bbMessages.join(" | ");
 
     bbNumberInput = "";
     bbBetInput = "500";
@@ -411,10 +433,12 @@
       }
     }
 
-    const rejected: string[] = [];
+    const rejectedMax: string[] = [];
+    const rejectedTotal: string[] = [];
     const newEntries = parsed.flatMap((entry) => {
-      if (!isWithinTypeLimit(entry.type, entry.number, Number(entry.bet))) {
-        rejected.push(`${entry.type} ${entry.number}`);
+      const check = checkTypeLimit(entry.type, entry.number, Number(entry.bet));
+      if (!check.ok) {
+        (check.reason === "max" ? rejectedMax : rejectedTotal).push(`${entry.type} ${entry.number}`);
         return [];
       }
       return [
@@ -429,8 +453,14 @@
     });
     bets = [...newEntries, ...bets];
 
-    wapFormError =
-      rejected.length > 0 ? `Melebihi limit total, tidak ditambahkan: ${rejected.join(", ")}` : "";
+    const wapMessages: string[] = [];
+    if (rejectedMax.length > 0) {
+      wapMessages.push(`Melebihi maximal bet, tidak ditambahkan: ${rejectedMax.join(", ")}`);
+    }
+    if (rejectedTotal.length > 0) {
+      wapMessages.push(`Melebihi limit total, tidak ditambahkan: ${rejectedTotal.join(", ")}`);
+    }
+    wapFormError = wapMessages.join(" | ");
     wapInput = "";
   }
 
@@ -472,10 +502,13 @@
       if (matches) numbers.push(String(n).padStart(2, "0"));
     }
 
-    let rejectedCount = 0;
+    let rejectedMaxCount = 0;
+    let rejectedTotalCount = 0;
     const newEntries = numbers.flatMap((number) => {
-      if (!isWithinTypeLimit(quickPasaran, number, Number(quickBetInput))) {
-        rejectedCount++;
+      const check = checkTypeLimit(quickPasaran, number, Number(quickBetInput));
+      if (!check.ok) {
+        if (check.reason === "max") rejectedMaxCount++;
+        else rejectedTotalCount++;
         return [];
       }
       return [
@@ -490,10 +523,18 @@
     });
     bets = [...newEntries, ...bets];
 
-    quickFormError =
-      rejectedCount > 0
-        ? `Bet ${quickPasaran} melebihi limit total, ${rejectedCount} nomor tidak ditambahkan`
-        : "";
+    const quickMessages: string[] = [];
+    if (rejectedMaxCount > 0) {
+      quickMessages.push(
+        `Bet ${quickPasaran} melebihi maximal bet, ${rejectedMaxCount} nomor tidak ditambahkan`,
+      );
+    }
+    if (rejectedTotalCount > 0) {
+      quickMessages.push(
+        `Bet ${quickPasaran} melebihi limit total, ${rejectedTotalCount} nomor tidak ditambahkan`,
+      );
+    }
+    quickFormError = quickMessages.join(" | ");
     quickBetInput = "500";
   }
 </script>
