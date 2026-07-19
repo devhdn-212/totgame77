@@ -65,9 +65,19 @@
       return;
     }
     const maxBet = BET_TYPE_LIMITS.SHIO?.maxBet;
-    if (maxBet !== undefined && Number(betInput) > maxBet) {
-      formError = `Bet melebihi maksimal ${formatIDR(maxBet)}`;
-      return;
+    if (maxBet !== undefined) {
+      if (Number(betInput) > maxBet) {
+        formError = `Bet melebihi maximal Bet dan maximal bet ${formatIDR(maxBet)}`;
+        return;
+      }
+      const existingTotal = bets
+        .filter((entry) => entry.type === "SHIO" && entry.number === shioInput)
+        .reduce((sum, entry) => sum + Number(entry.bet), 0);
+      if (existingTotal + Number(betInput) > maxBet) {
+        const remaining = Math.max(maxBet - existingTotal, 0);
+        formError = `Bet melebihi limit total ${formatIDR(maxBet)} untuk nomor ini (sisa ${formatIDR(remaining)})`;
+        return;
+      }
     }
 
     formError = "";

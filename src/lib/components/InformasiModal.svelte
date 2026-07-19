@@ -120,6 +120,10 @@
             { label: "Hadiah", value: "1x" },
             { label: "Disc", value: "2%" },
             { label: "Kei", value: "-1.5%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(1000000) },
+            { label: "Limit Total", value: formatIDR(1000000) },
+            { label: "Limit Global", value: formatIDR(1000000) },
           ],
         },
         {
@@ -128,6 +132,10 @@
             { label: "Hadiah", value: "1x" },
             { label: "Disc", value: "1.5%" },
             { label: "Kei", value: "-2.5%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(1000000) },
+            { label: "Limit Total", value: formatIDR(1000000) },
+            { label: "Limit Global", value: formatIDR(1000000) },
           ],
         },
         {
@@ -136,6 +144,10 @@
             { label: "Hadiah", value: "1x" },
             { label: "Disc", value: "1.5%" },
             { label: "Kei", value: "-2.5%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(1000000) },
+            { label: "Limit Total", value: formatIDR(1000000) },
+            { label: "Limit Global", value: formatIDR(1000000) },
           ],
         },
       ],
@@ -148,6 +160,10 @@
           items: [
             { label: "Hadiah", value: "2.7x" },
             { label: "Disc", value: "5%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(1000000) },
+            { label: "Limit Total", value: formatIDR(1000000) },
+            { label: "Limit Global", value: formatIDR(1000000) },
           ],
         },
       ],
@@ -167,6 +183,10 @@
             { label: "Kei Kecil", value: "0%" },
             { label: "Kei Genap", value: "-25%" },
             { label: "Kei Ganjil", value: "0%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(1000000) },
+            { label: "Limit Total", value: formatIDR(1000000) },
+            { label: "Limit Global", value: formatIDR(1000000) },
           ],
         },
       ],
@@ -179,6 +199,10 @@
           items: [
             { label: "Hadiah", value: "9x" },
             { label: "Disc", value: "8%" },
+            { label: "Minimal Bet", value: formatIDR(1000) },
+            { label: "Maksimal Bet", value: formatIDR(1000000) },
+            { label: "Limit Total", value: formatIDR(1000000) },
+            { label: "Limit Global", value: formatIDR(1000000) },
           ],
         },
       ],
@@ -190,6 +214,13 @@
       "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan 4D/3D/2D",
     Colok:
       "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan Colok",
+    "5050":
+      "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan 5050",
+    "Macau/Kombinasi":
+      "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan Macau/Kombinasi",
+    Dasar:
+      "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan Dasar",
+    Shio: "Tabel informasi minimal bet, maximal bet, hadiah, diskon, limit total dan limit global untuk permainan Shio",
   };
 
   let content = $derived(INFO_CONTENT[activeBetType] ?? null);

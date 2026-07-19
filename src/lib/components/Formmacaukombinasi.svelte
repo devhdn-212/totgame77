@@ -55,17 +55,28 @@
       minBetAlertOpen = true;
       return;
     }
+    const number = `${posisiInput}_${besarKecilInput}_${genapGanjilInput}`;
     const maxBet = BET_TYPE_LIMITS.MACAU_KOMBINASI?.maxBet;
-    if (maxBet !== undefined && Number(betInput) > maxBet) {
-      formError = `Bet melebihi maksimal ${formatIDR(maxBet)}`;
-      return;
+    if (maxBet !== undefined) {
+      if (Number(betInput) > maxBet) {
+        formError = `Bet melebihi maximal Bet dan maximal bet ${formatIDR(maxBet)}`;
+        return;
+      }
+      const existingTotal = bets
+        .filter((entry) => entry.type === "MACAU_KOMBINASI" && entry.number === number)
+        .reduce((sum, entry) => sum + Number(entry.bet), 0);
+      if (existingTotal + Number(betInput) > maxBet) {
+        const remaining = Math.max(maxBet - existingTotal, 0);
+        formError = `Bet melebihi limit total ${formatIDR(maxBet)} untuk nomor ini (sisa ${formatIDR(remaining)})`;
+        return;
+      }
     }
 
     formError = "";
     const newEntry: BetEntry = {
       id: crypto.randomUUID(),
       type: "MACAU_KOMBINASI",
-      number: `${posisiInput}_${besarKecilInput}_${genapGanjilInput}`,
+      number,
       bet: betInput,
       kombinasi: "DISC",
     };
