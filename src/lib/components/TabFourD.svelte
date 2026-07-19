@@ -19,7 +19,7 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Dices from "@lucide/svelte/icons/dices";
   import { untrack } from "svelte";
-  import { formatIDR, calculatePayout } from "$lib/utils";
+  import { formatIDR, calculatePayout, BET_TYPE_LIMITS } from "$lib/utils";
   import Decimal from "decimal.js";
 
   type BetEntry = {
@@ -143,6 +143,15 @@
     }
   }
 
+  function isWithinTypeLimit(type: string, number: string, bet: number): boolean {
+    const maxBet = BET_TYPE_LIMITS[type]?.maxBet;
+    if (maxBet === undefined) return true;
+    const existingTotal = bets
+      .filter((entry) => entry.type === type && entry.number === number)
+      .reduce((sum, entry) => sum + Number(entry.bet), 0);
+    return existingTotal + bet <= maxBet;
+  }
+
   function handleAddSetBet() {
     if (!/^\d{4}$/.test(setNumberInput)) {
       setFormError = "Nomor harus 4 digit";
@@ -163,15 +172,30 @@
       }
     }
 
-    setFormError = "";
-    const newEntries = filled.map((type) => ({
-      id: crypto.randomUUID(),
-      type,
-      number: deriveSetNumber(type, setNumberInput),
-      bet: setBetInputs[type],
-      kombinasi: setKombinasiInput,
-    }));
+    const rejected: string[] = [];
+    const newEntries = filled.flatMap((type) => {
+      const number = deriveSetNumber(type, setNumberInput);
+      const bet = Number(setBetInputs[type]);
+      if (!isWithinTypeLimit(type, number, bet)) {
+        rejected.push(type);
+        return [];
+      }
+      return [
+        {
+          id: crypto.randomUUID(),
+          type,
+          number,
+          bet: setBetInputs[type],
+          kombinasi: setKombinasiInput,
+        },
+      ];
+    });
     bets = [...newEntries, ...bets];
+
+    setFormError =
+      rejected.length > 0
+        ? `Bet ${rejected.join(", ")} melebihi limit total dan tidak ditambahkan`
+        : "";
 
     setNumberInput = "";
     setBetInputs = Object.fromEntries(BET_TYPE_LABELS.map((type) => [type, ""]));
@@ -291,16 +315,32 @@
         ? `Pasaran ${emptyLabels.join(", ")} kosong karena digit unik kurang (unik: ${uniqueDigitCount})`
         : "";
 
-    bbFormError = "";
-    const newEntries = results.map((result) => ({
-      id: crypto.randomUUID(),
-      type: result.pasaran,
-      number: result.nomor,
-      bet: bbBetInput,
-      deletable: false,
-      kombinasi: bbKombinasiInput,
-    }));
+    const rejectedCounts: Record<string, number> = {};
+    const newEntries = results.flatMap((result) => {
+      if (!isWithinTypeLimit(result.pasaran, result.nomor, Number(bbBetInput))) {
+        rejectedCounts[result.pasaran] = (rejectedCounts[result.pasaran] ?? 0) + 1;
+        return [];
+      }
+      return [
+        {
+          id: crypto.randomUUID(),
+          type: result.pasaran,
+          number: result.nomor,
+          bet: bbBetInput,
+          deletable: false,
+          kombinasi: bbKombinasiInput,
+        },
+      ];
+    });
     bets = [...newEntries, ...bets];
+
+    const rejectedLabels = Object.entries(rejectedCounts).map(
+      ([type, count]) => `${type} (${count} nomor)`,
+    );
+    bbFormError =
+      rejectedLabels.length > 0
+        ? `Melebihi limit total, tidak ditambahkan: ${rejectedLabels.join(", ")}`
+        : "";
 
     bbNumberInput = "";
     bbBetInput = "500";
@@ -371,16 +411,26 @@
       }
     }
 
-    wapFormError = "";
-    const newEntries = parsed.map((entry) => ({
-      id: crypto.randomUUID(),
-      type: entry.type,
-      number: entry.number,
-      bet: entry.bet,
-      kombinasi: wapKombinasiInput,
-    }));
+    const rejected: string[] = [];
+    const newEntries = parsed.flatMap((entry) => {
+      if (!isWithinTypeLimit(entry.type, entry.number, Number(entry.bet))) {
+        rejected.push(`${entry.type} ${entry.number}`);
+        return [];
+      }
+      return [
+        {
+          id: crypto.randomUUID(),
+          type: entry.type,
+          number: entry.number,
+          bet: entry.bet,
+          kombinasi: wapKombinasiInput,
+        },
+      ];
+    });
     bets = [...newEntries, ...bets];
 
+    wapFormError =
+      rejected.length > 0 ? `Melebihi limit total, tidak ditambahkan: ${rejected.join(", ")}` : "";
     wapInput = "";
   }
 
@@ -422,16 +472,28 @@
       if (matches) numbers.push(String(n).padStart(2, "0"));
     }
 
-    quickFormError = "";
-    const newEntries = numbers.map((number) => ({
-      id: crypto.randomUUID(),
-      type: quickPasaran,
-      number,
-      bet: quickBetInput,
-      kombinasi: quickKombinasiInput,
-    }));
+    let rejectedCount = 0;
+    const newEntries = numbers.flatMap((number) => {
+      if (!isWithinTypeLimit(quickPasaran, number, Number(quickBetInput))) {
+        rejectedCount++;
+        return [];
+      }
+      return [
+        {
+          id: crypto.randomUUID(),
+          type: quickPasaran,
+          number,
+          bet: quickBetInput,
+          kombinasi: quickKombinasiInput,
+        },
+      ];
+    });
     bets = [...newEntries, ...bets];
 
+    quickFormError =
+      rejectedCount > 0
+        ? `Bet ${quickPasaran} melebihi limit total, ${rejectedCount} nomor tidak ditambahkan`
+        : "";
     quickBetInput = "500";
   }
 </script>

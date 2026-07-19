@@ -103,20 +103,27 @@
     }
     const type = classifyBetType(result.data.number);
     const maxBet = BET_TYPE_LIMITS[type]?.maxBet;
-    if (maxBet !== undefined && Number(result.data.bet) > maxBet) {
-      formError = `Bet melebihi maksimal ${formatIDR(maxBet)} untuk ${type}`;
-      return;
+    const totalBet = Number(result.data.bet) * Number(result.data.qty);
+    if (maxBet !== undefined) {
+      const existingTotal = bets
+        .filter((entry) => entry.type === type && entry.number === result.data.number)
+        .reduce((sum, entry) => sum + Number(entry.bet), 0);
+      if (existingTotal + totalBet > maxBet) {
+        const remaining = Math.max(maxBet - existingTotal, 0);
+        formError = `Bet melebihi maksimal ${formatIDR(maxBet)} untuk ${type} pada nomor ini (sisa ${formatIDR(remaining)})`;
+        return;
+      }
     }
 
     formError = "";
-    const newEntries = Array.from({ length: Number(result.data.qty) }, () => ({
+    const newEntry = {
       id: crypto.randomUUID(),
       type,
       number: result.data.number,
-      bet: result.data.bet,
+      bet: String(totalBet),
       kombinasi: kombinasiInput,
-    }));
-    bets = [...newEntries, ...bets];
+    };
+    bets = [newEntry, ...bets];
     numberInput = "";
     betInput = "500";
     qtyInput = "1";

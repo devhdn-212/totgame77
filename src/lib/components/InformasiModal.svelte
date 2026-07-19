@@ -6,6 +6,7 @@
     DialogTitle,
     DialogDescription,
   } from "$lib/components/ui/dialog";
+  import { formatIDR } from "$lib/utils";
 
   let {
     open = $bindable(false),
@@ -29,6 +30,14 @@
         { label: "Hadiah BB Match", values: ["4000X", "400X", "400X", "70X", "65X", "65X"] },
         { label: "Hadiah BB", values: ["200X", "110X", "100X", "20X", "15X", "15X"] },
         { label: "Diskon", values: ["66%", "59%", "56%", "29%", "26%", "26%"] },
+        {
+          label: "Limit Total",
+          values: [50000, 200000, 200000, 1000000, 1000000, 1000000].map((v) => formatIDR(v)),
+        },
+        {
+          label: "Limit Global",
+          values: [50000, 200000, 200000, 1000000, 1000000, 1000000].map((v) => formatIDR(v)),
+        },
       ],
     },
     Colok: {
@@ -161,7 +170,7 @@
             <tr>
               <th class="border-b p-2 text-left font-medium"></th>
               {#each content.columns as col (col)}
-                <th class="border-b p-2 text-center font-medium">{col}</th>
+                <th class="border-b p-2 text-right font-medium">{col}</th>
               {/each}
             </tr>
           </thead>
@@ -170,7 +179,7 @@
               <tr>
                 <td class="text-muted-foreground border-b p-2 whitespace-nowrap">{row.label}</td>
                 {#each row.values as value, i (content.columns[i])}
-                  <td class="border-b p-2 text-center">{value}</td>
+                  <td class="border-b p-2 text-right">{value}</td>
                 {/each}
               </tr>
             {/each}
